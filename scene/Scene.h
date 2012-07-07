@@ -35,7 +35,7 @@ class OmniLight
 {
 public:
     glm::mat4 transform;
-    glm::mat4 color;
+    glm::vec4 color;
 };
 
 class Camera
@@ -60,7 +60,7 @@ public:
 
     SphereList spheres;
     PlaneList planes;
-    OmniLightList lights;
+    OmniLightList omniLights;
 };
 
 } // namespace scene

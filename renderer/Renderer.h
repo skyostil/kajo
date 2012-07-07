@@ -13,8 +13,26 @@ namespace scene
     class Material;
     class Sphere;
     class Plane;
+    class OmniLight;
     class Scene;
 }
+
+class TransformData
+{
+public:
+    glm::mat4 invTransform;
+    float determinant;
+};
+
+typedef std::vector<TransformData> TransformDataList;
+
+class PrecalculatedScene
+{
+public:
+    TransformDataList sphereTransforms;
+    TransformDataList planeTransforms;
+    TransformDataList omniLightTransforms;
+};
 
 class Renderer
 {
@@ -30,18 +48,26 @@ private:
     void prepare();
 
     template <typename ObjectType>
-    void prepareAll(std::vector<ObjectType>& objects);
+    void prepareAll(std::vector<ObjectType>& objects, TransformDataList& transformDataList);
 
     template <typename ObjectType>
-    void intersectAll(const std::vector<ObjectType>& objects, Ray& ray) const;
+    void intersectAll(const std::vector<ObjectType>& objects,
+                      const TransformDataList& transformDataList,
+                      Ray& ray) const;
 
-    void intersect(Ray& ray, const scene::Sphere& sphere) const;
-    void intersect(Ray& ray, const scene::Plane& plane) const;
+    void intersect(Ray& ray, const scene::Sphere& sphere, const TransformData& data) const;
+    void intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const;
 
     void processIntersection(Ray& ray, float t, const glm::vec3& normal,
                              const scene::Material* material) const;
 
+    template <typename ObjectType>
+    void applyAllLights(std::vector<ObjectType>& objects, Ray& ray);
+
+    void applyLight(Ray& ray, const scene::OmniLight& light);
+
     scene::Scene* m_scene;
+    PrecalculatedScene m_precalcScene;
 };
 
 #endif

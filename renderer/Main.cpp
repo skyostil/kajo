@@ -11,20 +11,36 @@ void buildTestScene(scene::Scene& scene)
 {
     using namespace scene;
 
-    Sphere sphere;
-    sphere.radius = 1.f;
-    sphere.material.color = glm::vec4(0, .3f, 0, 1);
-    sphere.transform = glm::translate(sphere.transform, glm::vec3(0, 0, 0));
-    scene.spheres.push_back(sphere);
+    glm::vec4 colors[] =
+    {
+        glm::vec4(0, .3f, 0, 1),
+        glm::vec4(.3f, 0, 0, 1),
+        glm::vec4(0, 0, .3f, 1),
+        glm::vec4(.3f, .3f, .3f, 1),
+    };
+
+    for (int i = 0; i < 4; i++)
+    {
+        Sphere sphere;
+        sphere.radius = 1.f;
+        sphere.material.color = colors[i];
+        sphere.transform = glm::translate(sphere.transform, glm::vec3(i * 2, 0, 0));
+        scene.spheres.push_back(sphere);
+    }
 
     Plane ground;
     ground.transform = glm::translate(ground.transform, glm::vec3(0, 3, 0));
     ground.material.color = glm::vec4(.6f, .6f, .6f, 1);
     scene.planes.push_back(ground);
 
+    OmniLight light;
+    light.transform = glm::translate(ground.transform, glm::vec3(0, 3, 0));
+    light.color = glm::vec4(.6f, .6f, .6f, 1);
+    scene.omniLights.push_back(light);
+
     Camera camera;
     camera.projection = glm::perspective(45.f, 4.f / 3.f, .1f, 100.f);
-    camera.transform = glm::lookAt(glm::vec3(-3, -1.2f, -3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    camera.transform = glm::lookAt(glm::vec3(-3, -1.2f, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
     scene.camera = camera;
 
     scene.backgroundColor = glm::vec4(.2f, .2f, .2f, 1);

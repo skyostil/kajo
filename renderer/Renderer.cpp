@@ -16,26 +16,29 @@ Renderer::Renderer(scene::Scene* scene):
     prepare();
 }
 
-
 template <typename ObjectType>
-void Renderer::prepareAll(std::vector<ObjectType>& objects)
+void Renderer::prepareAll(std::vector<ObjectType>& objects, TransformDataList& transformDataList)
 {
-    std::for_each(objects.begin(), objects.end(), [](ObjectType& object){
-        object.invTransform = glm::inverse(object.transform);
+    std::for_each(objects.begin(), objects.end(), [&](ObjectType& object){
+        TransformData transformData;
+        transformData.invTransform = glm::inverse(object.transform);
+        transformData.determinant = glm::determinant(object.transform);
+        transformDataList.push_back(transformData);
     });
 }
 
 void Renderer::prepare()
 {
-    prepareAll(m_scene->spheres);
-    prepareAll(m_scene->planes);
+    prepareAll(m_scene->spheres, m_precalcScene.sphereTransforms);
+    prepareAll(m_scene->planes, m_precalcScene.planeTransforms);
+    prepareAll(m_scene->omniLights, m_precalcScene.omniLightTransforms);
 }
 
-void Renderer::intersect(Ray& ray, const scene::Sphere& sphere) const
+void Renderer::intersect(Ray& ray, const scene::Sphere& sphere, const TransformData& data) const
 {
     // From http://wiki.cgsociety.org/index.php/Ray_Sphere_Intersection
-    glm::vec3 dir = glm::mat3(sphere.invTransform) * ray.direction;
-    glm::vec3 origin = ((sphere.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
+    glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
+    glm::vec3 origin = ((data.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
     float a = glm::dot(dir, dir);
     float b = 2 * glm::dot(dir, origin);
     float c = glm::dot(origin, origin) - sphere.radius * sphere.radius;
@@ -60,15 +63,18 @@ void Renderer::intersect(Ray& ray, const scene::Sphere& sphere) const
         return;
 
     if (t0 < 0)
-        processIntersection(ray, t1, glm::normalize(origin + dir * t1), &sphere.material);
-    else
-        processIntersection(ray, t0, glm::normalize(origin + dir * t0), &sphere.material);
+        t0 = t1;
+
+    glm::vec3 normal = glm::normalize(origin + dir * t0);
+    normal = glm::mat3(sphere.transform) * normal;
+
+    processIntersection(ray, t0 * data.determinant, normal, &sphere.material);
 }
 
-void Renderer::intersect(Ray& ray, const scene::Plane& plane) const
+void Renderer::intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const
 {
-    glm::vec3 dir = glm::mat3(plane.invTransform) * ray.direction;
-    glm::vec3 origin = ((plane.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
+    glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
+    glm::vec3 origin = ((data.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
     glm::vec3 normal(0, 1.f, 0);
 
     float denom = glm::dot(dir, normal);
@@ -81,18 +87,24 @@ void Renderer::intersect(Ray& ray, const scene::Plane& plane) const
     if (t < 0)
         return;
 
-    processIntersection(ray, t, glm::mat3(plane.transform) * normal, &plane.material);
+    normal = glm::mat3(plane.transform) * normal;
+
+    processIntersection(ray, t * data.determinant, normal, &plane.material);
 }
 
 template <typename ObjectType>
-void Renderer::intersectAll(const std::vector<ObjectType>& objects, Ray& ray) const
+void Renderer::intersectAll(const std::vector<ObjectType>& objects,
+                            const TransformDataList& transformDataList,
+                            Ray& ray) const
 {
     std::for_each(objects.begin(), objects.end(), [&](const ObjectType& object){
-        intersect(ray, object);
+        size_t i = &object - &objects[0];
+        intersect(ray, object, transformDataList[i]);
     });
 }
 
-void Renderer::processIntersection(Ray& ray, float t, const glm::vec3& normal,
+void Renderer::processIntersection(Ray& ray, float t,
+                                   const glm::vec3& normal,
                                    const scene::Material* material) const
 {
     if (t > ray.nearest)
@@ -105,9 +117,21 @@ void Renderer::processIntersection(Ray& ray, float t, const glm::vec3& normal,
 
 bool Renderer::trace(Ray& ray) const
 {
-    intersectAll(m_scene->spheres, ray);
-    intersectAll(m_scene->planes, ray);
+    intersectAll(m_scene->spheres, m_precalcScene.sphereTransforms, ray);
+    intersectAll(m_scene->planes, m_precalcScene.planeTransforms, ray);
     return ray.hit();
+}
+
+template <typename LightType>
+void Renderer::applyAllLights(std::vector<LightType>& lights, Ray& ray)
+{
+    std::for_each(lights.begin(), lights.end(), [&](const LightType& light){
+        applyLight(ray, light);
+    });
+}
+
+void Renderer::applyLight(Ray& ray, const scene::OmniLight& light)
+{
 }
 
 glm::vec4 Renderer::sample(const Ray& ray) const

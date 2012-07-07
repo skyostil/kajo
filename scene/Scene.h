@@ -11,7 +11,11 @@ namespace scene
 class Material
 {
 public:
-    glm::vec4 color;
+    Material();
+
+    glm::vec4 ambient;
+    glm::vec4 diffuse;
+    float specularExponent;
 };
 
 class Sphere
@@ -31,11 +35,14 @@ public:
     Material material;
 };
 
-class OmniLight
+class PointLight
 {
 public:
+    PointLight();
+
     glm::mat4 transform;
     glm::vec4 color;
+    float intensity;
 };
 
 class Camera
@@ -47,7 +54,7 @@ public:
 
 typedef std::vector<Sphere> SphereList;
 typedef std::vector<Plane> PlaneList;
-typedef std::vector<OmniLight> OmniLightList;
+typedef std::vector<PointLight> PointLightList;
 
 class Scene
 {
@@ -60,7 +67,7 @@ public:
 
     SphereList spheres;
     PlaneList planes;
-    OmniLightList omniLights;
+    PointLightList pointLights;
 };
 
 } // namespace scene

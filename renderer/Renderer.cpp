@@ -31,7 +31,7 @@ void Renderer::prepare()
 {
     prepareAll(m_scene->spheres, m_precalcScene.sphereTransforms);
     prepareAll(m_scene->planes, m_precalcScene.planeTransforms);
-    prepareAll(m_scene->omniLights, m_precalcScene.omniLightTransforms);
+    prepareAll(m_scene->pointLights, m_precalcScene.pointLightTransforms);
 }
 
 void Renderer::intersect(Ray& ray, const scene::Sphere& sphere, const TransformData& data) const
@@ -87,7 +87,7 @@ void Renderer::intersect(Ray& ray, const scene::Plane& plane, const TransformDat
     if (t < 0)
         return;
 
-    normal = glm::mat3(plane.transform) * normal;
+    normal = glm::mat3(plane.transform) * -normal;
 
     processIntersection(ray, t * data.determinant, normal, &plane.material);
 }
@@ -117,30 +117,59 @@ void Renderer::processIntersection(Ray& ray, float t,
 
 bool Renderer::trace(Ray& ray) const
 {
-    intersectAll(m_scene->spheres, m_precalcScene.sphereTransforms, ray);
     intersectAll(m_scene->planes, m_precalcScene.planeTransforms, ray);
+    intersectAll(m_scene->spheres, m_precalcScene.sphereTransforms, ray);
     return ray.hit();
 }
 
 template <typename LightType>
-void Renderer::applyAllLights(std::vector<LightType>& lights, Ray& ray)
+void Renderer::applyAllLights(const std::vector<LightType>& lights,
+                              const TransformDataList& transformDataList,
+                              const Ray& ray, glm::vec4& color) const
 {
     std::for_each(lights.begin(), lights.end(), [&](const LightType& light){
-        applyLight(ray, light);
+        size_t i = &light - &lights[0];
+        applyLight(ray, color, light, transformDataList[i]);
     });
 }
 
-void Renderer::applyLight(Ray& ray, const scene::OmniLight& light)
+void Renderer::applyLight(const Ray& ray, glm::vec4& color, const scene::PointLight& light,
+                          const TransformData& data) const
 {
+    glm::vec3 pos = ray.origin + ray.direction * ray.nearest;
+    glm::vec3 dir(data.invTransform * glm::vec4(pos, 1));
+
+    float invDistance = 1.f / glm::dot(dir, dir);
+    dir = glm::normalize(dir);
+
+    // Ambient
+    color += ray.material->ambient * light.color;
+
+    // Diffuse
+    float intensity = glm::clamp(glm::dot(dir, ray.normal), 0.f, 1.f) * light.intensity;
+    color += intensity * ray.material->diffuse * invDistance * light.color;
+
+    // Specular
+    if (ray.material->specularExponent)
+    {
+        glm::vec3 reflection = glm::reflect(dir, ray.normal);
+        intensity = glm::pow(glm::clamp(glm::dot(ray.direction, reflection), 0.f, 1.f),
+                             ray.material->specularExponent);
+        intensity *= light.intensity;
+        color += intensity * light.color * invDistance;
+    }
 }
 
 glm::vec4 Renderer::sample(const Ray& ray) const
 {
-    glm::vec4 color = m_scene->backgroundColor;
     if (!ray.hit() || !ray.material)
-        return color;
+        return m_scene->backgroundColor;
 
-    color = ray.material->color;
+    glm::vec4 color = ray.material->ambient;
+    color.a = 1.f;
+    applyAllLights(m_scene->pointLights, m_precalcScene.pointLightTransforms, ray, color);
+
+    //color = ray.material->color;
     //color = glm::vec4(-ray.normal, 1.f);
     return color;
 }

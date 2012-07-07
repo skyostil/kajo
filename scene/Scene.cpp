@@ -6,3 +6,13 @@ using namespace scene;
 Scene::Scene()
 {
 };
+
+Material::Material():
+    specularExponent(0)
+{
+};
+
+PointLight::PointLight():
+    intensity(1)
+{
+}

@@ -13,7 +13,7 @@ namespace scene
     class Material;
     class Sphere;
     class Plane;
-    class OmniLight;
+    class PointLight;
     class Scene;
 }
 
@@ -31,7 +31,7 @@ class PrecalculatedScene
 public:
     TransformDataList sphereTransforms;
     TransformDataList planeTransforms;
-    TransformDataList omniLightTransforms;
+    TransformDataList pointLightTransforms;
 };
 
 class Renderer
@@ -61,10 +61,13 @@ private:
     void processIntersection(Ray& ray, float t, const glm::vec3& normal,
                              const scene::Material* material) const;
 
-    template <typename ObjectType>
-    void applyAllLights(std::vector<ObjectType>& objects, Ray& ray);
+    template <typename LightType>
+    void applyAllLights(const std::vector<LightType>& lights,
+                        const TransformDataList& transformDataList,
+                        const Ray& ray, glm::vec4& color) const;
 
-    void applyLight(Ray& ray, const scene::OmniLight& light);
+    void applyLight(const Ray& ray, glm::vec4& color, const scene::PointLight& light,
+                    const TransformData& data) const;
 
     scene::Scene* m_scene;
     PrecalculatedScene m_precalcScene;

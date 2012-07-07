@@ -23,20 +23,22 @@ void buildTestScene(scene::Scene& scene)
     {
         Sphere sphere;
         sphere.radius = 1.f;
-        sphere.material.color = colors[i];
+        sphere.material.diffuse = colors[i];
+        sphere.material.specularExponent = 20;
         sphere.transform = glm::translate(sphere.transform, glm::vec3(i * 2, 0, 0));
         scene.spheres.push_back(sphere);
     }
 
     Plane ground;
     ground.transform = glm::translate(ground.transform, glm::vec3(0, 3, 0));
-    ground.material.color = glm::vec4(.6f, .6f, .6f, 1);
+    ground.material.diffuse = glm::vec4(.6f, .6f, .6f, 1);
     scene.planes.push_back(ground);
 
-    OmniLight light;
+    PointLight light;
     light.transform = glm::translate(ground.transform, glm::vec3(0, 3, 0));
-    light.color = glm::vec4(.6f, .6f, .6f, 1);
-    scene.omniLights.push_back(light);
+    light.color = glm::vec4(1, 1, 1, 1);
+    light.intensity = 60;
+    scene.pointLights.push_back(light);
 
     Camera camera;
     camera.projection = glm::perspective(45.f, 4.f / 3.f, .1f, 100.f);

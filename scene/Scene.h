@@ -45,6 +45,8 @@ class Scene
 public:
     Scene();
 
+    glm::vec4 backgroundColor;
+
     Camera camera;
 
     SphereList spheres;

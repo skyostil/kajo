@@ -22,7 +22,7 @@ class Renderer
 public:
     Renderer(scene::Scene* scene);
 
-    void render(Surface& surface, int x, int y, int width, int height);
+    void render(Surface& surface, int xOffset, int yOffset, int width, int height);
 
 private:
     scene::Scene* m_scene;

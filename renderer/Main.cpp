@@ -16,8 +16,9 @@ void buildTestScene(scene::Scene& scene)
     Camera camera;
     camera.projection = glm::perspective(45.f, 4.f / 3.f, .1f, 100.f);
     camera.view = glm::translate(camera.view, glm::vec3(0, 0, -3.f));
-    scene.camera = camera;
 
+    scene.backgroundColor = glm::vec4(.2f, .2f, .2f, 1);
+    scene.camera = camera;
     scene.spheres.push_back(sphere);
 }
 

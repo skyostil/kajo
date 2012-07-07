@@ -5,6 +5,8 @@ project(rayska)
 if(CMAKE_COMPILER_IS_GNUCXX)
   add_definitions(-ffast-math)
   add_definitions(-std=c++0x)
+  add_definitions(-Wall)
+  add_definitions(-Wno-comment) # glm bug
 endif()
 
 if(MSVC)

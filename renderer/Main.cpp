@@ -1,4 +1,6 @@
+// Copyright (C) 2012 Sami Kyöstilä
 #include "Renderer.h"
+#include "Surface.h"
 #include "scene/Scene.h"
 
 #include <iostream>
@@ -10,12 +12,13 @@ void buildTestScene(scene::Scene& scene)
     using namespace scene;
 
     Sphere sphere;
-    sphere.radius = 1;
-    sphere.material.color = glm::vec3(0, 1, 0);
+    sphere.radius = 1.f;
+    sphere.material.color = glm::vec4(0, .3f, 0, 1);
+    sphere.transform = glm::translate(sphere.transform, glm::vec3(0, 0, 3.f));
 
     Camera camera;
     camera.projection = glm::perspective(45.f, 4.f / 3.f, .1f, 100.f);
-    camera.view = glm::translate(camera.view, glm::vec3(0, 0, -3.f));
+    //camera.view = glm::translate(camera.view, glm::vec3(0, 0, -3.f));
 
     scene.backgroundColor = glm::vec4(.2f, .2f, .2f, 1);
     scene.camera = camera;

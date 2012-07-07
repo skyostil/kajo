@@ -11,7 +11,7 @@ namespace scene
 class Material
 {
 public:
-    glm::vec3 color;
+    glm::vec4 color;
 };
 
 class Sphere

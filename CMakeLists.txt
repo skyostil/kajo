@@ -13,6 +13,9 @@ if(MSVC)
   add_definitions(/fp:fast)
 endif()
 
+add_definitions(-DGLM_FORCE_CXX11)
+add_definitions(-DGLM_SWIZZLE)
+
 include_directories(".")
 include_directories("third_party/glm")
 include_directories("third_party/lodepng")

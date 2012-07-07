@@ -23,6 +23,9 @@ public:
 
     void render(Surface& surface, int xOffset, int yOffset, int width, int height) const;
 
+    bool trace(Ray& ray) const;
+    glm::vec4 sample(const Ray& ray) const;
+
 private:
     void prepare();
 
@@ -37,7 +40,6 @@ private:
 
     void processIntersection(Ray& ray, float t, const glm::vec3& normal,
                              const scene::Material* material) const;
-    glm::vec4 sample(const Ray& ray) const;
 
     scene::Scene* m_scene;
 };

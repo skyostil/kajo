@@ -3,6 +3,8 @@ add_executable(
     Main.cpp
     Surface.cpp
     Surface.h
+    Ray.cpp
+    Ray.h
     Renderer.cpp
     Renderer.h
     Util.cpp

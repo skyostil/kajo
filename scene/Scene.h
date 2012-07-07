@@ -31,6 +31,13 @@ public:
     Material material;
 };
 
+class OmniLight
+{
+public:
+    glm::mat4 transform;
+    glm::mat4 color;
+};
+
 class Camera
 {
 public:
@@ -40,6 +47,7 @@ public:
 
 typedef std::vector<Sphere> SphereList;
 typedef std::vector<Plane> PlaneList;
+typedef std::vector<OmniLight> OmniLightList;
 
 class Scene
 {
@@ -52,6 +60,7 @@ public:
 
     SphereList spheres;
     PlaneList planes;
+    OmniLightList lights;
 };
 
 } // namespace scene

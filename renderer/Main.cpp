@@ -14,17 +14,17 @@ void buildTestScene(scene::Scene& scene)
     Sphere sphere;
     sphere.radius = 1.f;
     sphere.material.color = glm::vec4(0, .3f, 0, 1);
-    sphere.transform = glm::translate(sphere.transform, glm::vec3(0, 0, -3.f));
+    sphere.transform = glm::translate(sphere.transform, glm::vec3(0, 0, 0));
     scene.spheres.push_back(sphere);
 
     Plane ground;
-    ground.transform = glm::translate(ground.transform, glm::vec3(0, 3.f, 0));
+    ground.transform = glm::translate(ground.transform, glm::vec3(0, 3, 0));
     ground.material.color = glm::vec4(.6f, .6f, .6f, 1);
     scene.planes.push_back(ground);
 
     Camera camera;
     camera.projection = glm::perspective(45.f, 4.f / 3.f, .1f, 100.f);
-    camera.transform = glm::translate(camera.transform, glm::vec3(0, 0, 3.0f));
+    camera.transform = glm::lookAt(glm::vec3(-3, -1.2f, -3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
     scene.camera = camera;
 
     scene.backgroundColor = glm::vec4(.2f, .2f, .2f, 1);

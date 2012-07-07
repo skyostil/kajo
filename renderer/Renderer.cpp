@@ -1,5 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
+#include "Ray.h"
 #include "Renderer.h"
 #include "Surface.h"
 #include "Util.h"
@@ -8,33 +9,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
 #include <cmath>
-
-class Ray
-{
-public:
-    Ray();
-
-    bool hit() const;
-
-    glm::vec3 origin;
-    glm::vec3 direction;
-    
-    // Result
-    float nearest;
-    glm::vec3 normal;
-    const scene::Material* material;
-};
-
-Ray::Ray():
-    nearest(std::numeric_limits<float>::infinity()),
-    material(0)
-{
-}
-
-bool Ray::hit() const
-{
-    return nearest != std::numeric_limits<float>::infinity();
-}
 
 Renderer::Renderer(scene::Scene* scene):
     m_scene(scene)
@@ -66,10 +40,6 @@ void Renderer::intersect(Ray& ray, const scene::Sphere& sphere) const
     float b = 2 * glm::dot(dir, origin);
     float c = glm::dot(origin, origin) - sphere.radius * sphere.radius;
 
-    //dump(origin);
-    //dump(dir);
-    //printf("a %f b %f c %f\n", a, b, c);
-
     float discr = b * b - 4 * a * c;
     if (discr < 0)
         return;
@@ -83,12 +53,8 @@ void Renderer::intersect(Ray& ray, const scene::Sphere& sphere) const
     float t0 = q / a;
     float t1 = c / q;
 
-    //printf("a %f b %f c %f\n", a, b, c);
-
     if (t0 > t1)
         std::swap(t0, t1);
-
-    //printf("%f..%f\n", t0, t1);
 
     if (t1 < 0)
         return;
@@ -137,6 +103,13 @@ void Renderer::processIntersection(Ray& ray, float t, const glm::vec3& normal,
     ray.material = material;
 }
 
+bool Renderer::trace(Ray& ray) const
+{
+    intersectAll(m_scene->spheres, ray);
+    intersectAll(m_scene->planes, ray);
+    return ray.hit();
+}
+
 glm::vec4 Renderer::sample(const Ray& ray) const
 {
     glm::vec4 color = m_scene->backgroundColor;
@@ -153,14 +126,10 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
     const scene::Camera& camera = m_scene->camera;
 
     const glm::vec4 viewport(0, 0, 1, 1);
-    const glm::mat3 cameraTransform(camera.transform);
-    glm::vec3 p1 = glm::unProject(glm::vec3(0.f, 0.f, 0.f), glm::mat4(1.f), camera.projection, viewport);
-    glm::vec3 p2 = glm::unProject(glm::vec3(1.f, 0.f, 0.f), glm::mat4(1.f), camera.projection, viewport);
-    glm::vec3 p3 = glm::unProject(glm::vec3(0.f, 1.f, 0.f), glm::mat4(1.f), camera.projection, viewport);
-    glm::vec3 origin(camera.transform * glm::vec4(0.f, 0.f, 0.f, 1.f));
-    p1 = cameraTransform * p1;
-    p2 = cameraTransform * p2;
-    p3 = cameraTransform * p3;
+    glm::vec3 p1 = glm::unProject(glm::vec3(0.f, 0.f, 0.f), camera.transform, camera.projection, viewport);
+    glm::vec3 p2 = glm::unProject(glm::vec3(1.f, 0.f, 0.f), camera.transform, camera.projection, viewport);
+    glm::vec3 p3 = glm::unProject(glm::vec3(0.f, 1.f, 0.f), camera.transform, camera.projection, viewport);
+    glm::vec3 origin(glm::inverse(camera.transform) * glm::vec4(0.f, 0.f, 0.f, 1.f));
 
     for (int y = yOffset; y < yOffset + height; y++)
     {
@@ -168,16 +137,16 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
         {
             float wx = static_cast<float>(x) / surface.width;
             float wy = static_cast<float>(y) / surface.height;
-            glm::vec3 direction = p1 + (p2 - p1) * wx + (p3 - p1) * wy;
+            glm::vec3 direction = p1 + (p2 - p1) * wx + (p3 - p1) * wy - origin;
             direction = glm::normalize(direction);
 
             Ray ray;
             ray.origin = origin;
             ray.direction = direction;
-            intersectAll(m_scene->spheres, ray);
-            intersectAll(m_scene->planes, ray);
 
+            trace(ray);
             glm::vec4 color = sample(ray);
+
             surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(color);
         }
     }

@@ -18,6 +18,7 @@ class Sphere
 {
 public:
     glm::mat4 transform;
+    glm::mat4 invTransform;
     Material material;
     float radius;
 };
@@ -26,15 +27,15 @@ class Plane
 {
 public:
     glm::mat4 transform;
+    glm::mat4 invTransform;
     Material material;
-    float distance;
 };
 
 class Camera
 {
 public:
+    glm::mat4 transform;
     glm::mat4 projection;
-    glm::mat4 view;
 };
 
 typedef std::vector<Sphere> SphereList;

@@ -24,6 +24,11 @@ public:
     void render(Surface& surface, int xOffset, int yOffset, int width, int height) const;
 
 private:
+    void prepare();
+
+    template <typename ObjectType>
+    void prepareAll(std::vector<ObjectType>& objects);
+
     template <typename ObjectType>
     void intersectAll(const std::vector<ObjectType>& objects, Ray& ray) const;
 

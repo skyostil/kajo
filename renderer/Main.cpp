@@ -1,7 +1,9 @@
 #include "Renderer.h"
 #include "scene/Scene.h"
 
+#include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+#include <lodepng.h>
 
 void buildTestScene(scene::Scene& scene)
 {
@@ -19,10 +21,31 @@ void buildTestScene(scene::Scene& scene)
     scene.spheres.push_back(sphere);
 }
 
+void render(Surface& surface, scene::Scene& scene)
+{
+    Renderer renderer(&scene);
+    renderer.render(surface, 0, 0, surface.width, surface.height);
+}
+
+void save(Surface& surface, const std::string& fileName)
+{
+    unsigned error =
+        lodepng::encode(fileName,
+                        reinterpret_cast<const unsigned char*>(&surface.pixels[0]),
+                        surface.width, surface.height);
+    if (error)
+    {
+        std::cerr << "PNG encode failure: " << lodepng_error_text(error) << std::endl;
+    }
+}
+
 int main(int argc, char** argv)
 {
     scene::Scene scene;
-    Renderer renderer;
 
     buildTestScene(scene);
+
+    Surface surface(640, 480);
+    render(surface, scene);
+    save(surface, "out.png");
 }

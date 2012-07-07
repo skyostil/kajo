@@ -5,4 +5,4 @@ add_executable(
     Renderer.h
 )
 
-target_link_libraries(renderer scene)
+target_link_libraries(renderer scene lodepng)

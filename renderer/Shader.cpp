@@ -2,13 +2,11 @@
 
 #include "Shader.h"
 #include "scene/Scene.h"
+#include "Random.h"
 #include "Ray.h"
 #include "Raytracer.h"
 
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/random.hpp>
-#include <glm/gtx/vector_angle.hpp>
-#include <glm/gtx/rotate_vector.hpp>
 #include <algorithm>
 #include <limits>
 #include <cmath>
@@ -25,41 +23,10 @@ Shader::Shader(scene::Scene* scene, Raytracer* raytracer):
 {
 }
 
-/*
-template <typename LightType>
-void Shader::applyAllLights(const std::vector<LightType>& lights,
-                            const TransformDataList& transformDataList,
-                            const Ray& ray, glm::vec4& color) const
-{
-    std::for_each(lights.begin(), lights.end(), [&](const LightType& light){
-        size_t i = &light - &lights[0];
-        float occlusion = lightOcclusion(ray, light, transformDataList[i]);
-        applyLight(ray, color, occlusion, light, transformDataList[i]);
-    });
-}
-
-float Shader::lightOcclusion(const Ray& ray, const scene::PointLight& light,
-                             const TransformData& data) const
-{
-    glm::vec3 lightPos(light.transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 dir(lightPos - ray.hitPos);
-
-    Ray shadowRay;
-    shadowRay.direction = glm::normalize(dir);
-    shadowRay.origin = ray.hitPos + shadowRay.direction * g_surfaceEpsilon;
-    shadowRay.maxDistance = glm::length(dir);
-
-    if (!m_raytracer->trace(shadowRay))
-        return 1;
-
-    return 0;
-}
-*/
-
 template <typename ObjectType>
 void Shader::applyAllEmissiveObjects(const std::vector<ObjectType>& objects,
                                      const TransformDataList& transformDataList,
-                                     const Ray& ray, glm::vec4& color) const
+                                     const Ray& ray, glm::vec4& color, Random& random) const
 {
     std::for_each(objects.begin(), objects.end(), [&](const ObjectType& object){
         if (object.material.emission == glm::vec4(0))
@@ -67,15 +34,15 @@ void Shader::applyAllEmissiveObjects(const std::vector<ObjectType>& objects,
         if (reinterpret_cast<intptr_t>(&object) == ray.objectId)
             return;
         size_t i = &object - &objects[0];
-        applyEmissiveObject(object, transformDataList[i], ray, color);
+        applyEmissiveObject(object, transformDataList[i], ray, color, random);
     });
 }
 
 void Shader::applyEmissiveObject(const scene::Sphere& sphere, const TransformData& data,
-                                 const Ray& ray, glm::vec4& color) const
+                                 const Ray& ray, glm::vec4& color, Random& random) const
 {
     glm::vec3 lightPos(sphere.transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 offset = glm::sphericalRand(sphere.radius);
+    glm::vec3 offset = random.generateSpherical() * sphere.radius;
     glm::vec3 dir(lightPos + offset - ray.hitPos);
 
     Ray shadowRay;
@@ -96,7 +63,7 @@ void Shader::applyEmissiveObject(const scene::Sphere& sphere, const TransformDat
     color += sphere.material.emission * glm::dot(shadowRay.direction, normal) * o * M_1_PI;
 }
 
-glm::vec4 Shader::shade(const Ray& ray, bool indirectLightOnly, int depth) const
+glm::vec4 Shader::shade(const Ray& ray, Random& random, bool indirectLightOnly, int depth) const
 {
     if (!ray.hit() || !ray.material)
         return m_scene->backgroundColor;
@@ -114,7 +81,8 @@ glm::vec4 Shader::shade(const Ray& ray, bool indirectLightOnly, int depth) const
     if (!exitingMaterial)
     {
         glm::vec4 incomingRadiance;
-        applyAllEmissiveObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms, ray, incomingRadiance);
+        applyAllEmissiveObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
+                                ray, incomingRadiance, random);
         color += incomingRadiance * ray.material->diffuse;
     }
     else
@@ -143,13 +111,13 @@ glm::vec4 Shader::shade(const Ray& ray, bool indirectLightOnly, int depth) const
         refractedRay.origin = ray.hitPos + refractedRay.direction * g_surfaceEpsilon;
 
         if (m_raytracer->trace(refractedRay))
-            color += shade(refractedRay, false, depth + 1) * ray.material->transparency * ray.material->diffuse;
+            color += shade(refractedRay, random, false, depth + 1) * ray.material->transparency * ray.material->diffuse;
     }
 
     // Diffuse reflection
     if (!exitingMaterial)
     {
-        glm::vec3 dir = glm::sphericalRand(1.f);
+        glm::vec3 dir = random.generateSpherical();
         if (glm::dot(dir, ray.normal) < 0)
             dir = -dir;
 #if 0
@@ -169,7 +137,7 @@ glm::vec4 Shader::shade(const Ray& ray, bool indirectLightOnly, int depth) const
         reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
 
         if (m_raytracer->trace(reflectedRay))
-            color += shade(reflectedRay, true, depth + 1) * ray.material->diffuse;
+            color += shade(reflectedRay, random, true, depth + 1) * ray.material->diffuse;
     }
 
     // Specular reflection
@@ -180,7 +148,7 @@ glm::vec4 Shader::shade(const Ray& ray, bool indirectLightOnly, int depth) const
         reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
 
         if (m_raytracer->trace(reflectedRay))
-            color += shade(reflectedRay, false, depth + 1) * ray.material->reflectivity;
+            color += shade(reflectedRay, random, false, depth + 1) * ray.material->reflectivity;
     }
 
     //color = ray.material->color;

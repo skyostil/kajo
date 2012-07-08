@@ -8,4 +8,3 @@ void dump(const glm::vec3& v);
 void dump(const glm::vec4& v);
 
 #endif
-

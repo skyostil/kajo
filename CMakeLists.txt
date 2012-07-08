@@ -15,6 +15,7 @@ endif()
 
 add_definitions(-DGLM_FORCE_CXX11)
 add_definitions(-DGLM_SWIZZLE)
+add_definitions(-DUSE_SSE2)
 
 include_directories(".")
 include_directories("third_party/glm")

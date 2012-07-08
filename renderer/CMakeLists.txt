@@ -5,6 +5,8 @@ add_executable(
     Main.cpp
     PrecalculatedScene.cpp
     PrecalculatedScene.h
+    Random.cpp
+    Random.h
     Ray.cpp
     Ray.h
     Raytracer.cpp

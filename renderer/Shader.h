@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+class Random;
 class Ray;
 class Raytracer;
 class Surface;
@@ -26,16 +27,16 @@ class Shader
 public:
     Shader(scene::Scene* scene, Raytracer* raytracer);
 
-    glm::vec4 shade(const Ray& ray, bool indirectLightOnly = false, int depth = 0) const;
+    glm::vec4 shade(const Ray& ray, Random& random, bool indirectLightOnly = false, int depth = 0) const;
 
 private:
     template <typename ObjectType>
     void applyAllEmissiveObjects(const std::vector<ObjectType>& lights,
                                  const TransformDataList& transformDataList,
-                                 const Ray& ray, glm::vec4& color) const;
+                                 const Ray& ray, glm::vec4& color, Random& random) const;
 
     void applyEmissiveObject(const scene::Sphere& sphere, const TransformData& data,
-                             const Ray& ray, glm::vec4& color) const;
+                             const Ray& ray, glm::vec4& color, Random& random) const;
 
     scene::Scene* m_scene;
     Raytracer* m_raytracer;

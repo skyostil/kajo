@@ -23,6 +23,7 @@ void buildTestScene(scene::Scene& scene)
     {
         Sphere sphere;
         sphere.radius = 1.f;
+        sphere.material.ambient = colors[i] * 0.1f;
         sphere.material.diffuse = colors[i];
         sphere.material.specularExponent = 20;
         sphere.transform = glm::translate(sphere.transform, glm::vec3(i * 2, 0, 0));
@@ -30,14 +31,15 @@ void buildTestScene(scene::Scene& scene)
     }
 
     Plane ground;
-    ground.transform = glm::translate(ground.transform, glm::vec3(0, 3, 0));
+    ground.transform = glm::translate(ground.transform, glm::vec3(0, 1, 0));
     ground.material.diffuse = glm::vec4(.6f, .6f, .6f, 1);
+    ground.material.ambient = ground.material.diffuse * 0.1f;
     scene.planes.push_back(ground);
 
     PointLight light;
-    light.transform = glm::translate(ground.transform, glm::vec3(0, 3, 0));
+    light.transform = glm::translate(glm::mat4(1), glm::vec3(4, 4, 0));
     light.color = glm::vec4(1, 1, 1, 1);
-    light.intensity = 60;
+    light.intensity = 40;
     scene.pointLights.push_back(light);
 
     Camera camera;

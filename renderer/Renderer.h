@@ -66,7 +66,11 @@ private:
                         const TransformDataList& transformDataList,
                         const Ray& ray, glm::vec4& color) const;
 
-    void applyLight(const Ray& ray, glm::vec4& color, const scene::PointLight& light,
+    float lightOcclusion(const Ray& ray, const scene::PointLight& light,
+                         const TransformData& data) const;
+
+    void applyLight(const Ray& ray, glm::vec4& color, float occlusion,
+                    const scene::PointLight& light,
                     const TransformData& data) const;
 
     scene::Scene* m_scene;

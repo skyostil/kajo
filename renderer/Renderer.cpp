@@ -129,11 +129,33 @@ void Renderer::applyAllLights(const std::vector<LightType>& lights,
 {
     std::for_each(lights.begin(), lights.end(), [&](const LightType& light){
         size_t i = &light - &lights[0];
-        applyLight(ray, color, light, transformDataList[i]);
+        float occlusion = lightOcclusion(ray, light, transformDataList[i]);
+        applyLight(ray, color, occlusion, light, transformDataList[i]);
     });
 }
 
-void Renderer::applyLight(const Ray& ray, glm::vec4& color, const scene::PointLight& light,
+float Renderer::lightOcclusion(const Ray& ray, const scene::PointLight& light,
+                               const TransformData& data) const
+{
+    glm::vec3 hitPos = ray.origin + ray.direction * ray.nearest;
+    glm::vec3 lightPos(light.transform * glm::vec4(0, 0, 0, 1));
+    glm::vec3 dir = hitPos - lightPos;
+    float lightDist = glm::dot(dir, dir);
+
+    Ray shadowRay;
+    shadowRay.origin = hitPos;
+    shadowRay.direction = glm::normalize(dir);
+
+    shadowRay.origin += shadowRay.direction * 0.01f;
+
+    if (!trace(shadowRay))
+        return 1;
+
+    return (shadowRay.nearest * shadowRay.nearest < lightDist) ? 0 : 1;
+}
+
+void Renderer::applyLight(const Ray& ray, glm::vec4& color, float occlusion,
+                          const scene::PointLight& light,
                           const TransformData& data) const
 {
     glm::vec3 pos = ray.origin + ray.direction * ray.nearest;
@@ -147,7 +169,7 @@ void Renderer::applyLight(const Ray& ray, glm::vec4& color, const scene::PointLi
 
     // Diffuse
     float intensity = glm::clamp(glm::dot(dir, ray.normal), 0.f, 1.f) * light.intensity;
-    color += intensity * ray.material->diffuse * invDistance * light.color;
+    color += intensity * ray.material->diffuse * invDistance * light.color * occlusion;
 
     // Specular
     if (ray.material->specularExponent)
@@ -156,7 +178,7 @@ void Renderer::applyLight(const Ray& ray, glm::vec4& color, const scene::PointLi
         intensity = glm::pow(glm::clamp(glm::dot(ray.direction, reflection), 0.f, 1.f),
                              ray.material->specularExponent);
         intensity *= light.intensity;
-        color += intensity * light.color * invDistance;
+        color += intensity * light.color * invDistance * occlusion;
     }
 }
 

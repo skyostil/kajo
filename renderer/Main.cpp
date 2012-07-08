@@ -1,6 +1,8 @@
 // Copyright (C) 2012 Sami Kyöstilä
 #include "Renderer.h"
+#include "Raytracer.h"
 #include "Surface.h"
+#include "Shader.h"
 #include "scene/Scene.h"
 
 #include <iostream>

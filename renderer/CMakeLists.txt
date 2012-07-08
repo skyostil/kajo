@@ -1,12 +1,18 @@
 add_executable(
     renderer
     Main.cpp
-    Surface.cpp
-    Surface.h
+    PrecalculatedScene.cpp
+    PrecalculatedScene.h
     Ray.cpp
     Ray.h
+    Raytracer.cpp
+    Raytracer.h
     Renderer.cpp
     Renderer.h
+    Shader.cpp
+    Shader.h
+    Surface.cpp
+    Surface.h
     Util.cpp
     Util.h
 )

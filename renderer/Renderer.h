@@ -75,6 +75,8 @@ private:
 
     scene::Scene* m_scene;
     PrecalculatedScene m_precalcScene;
+
+    int m_depthLimit;
 };
 
 #endif

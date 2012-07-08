@@ -18,7 +18,7 @@ public:
 
     glm::vec3 origin;
     glm::vec3 direction;
-    
+
     // Result
     float nearest;
     glm::vec3 normal;

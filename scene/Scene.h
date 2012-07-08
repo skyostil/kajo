@@ -19,6 +19,7 @@ public:
     float reflectivity;
     float transparency;
     float refractiveIndex;
+    bool checkerboard;
 };
 
 class Sphere

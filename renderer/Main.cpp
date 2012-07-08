@@ -23,13 +23,13 @@ void buildTestScene(scene::Scene& scene)
     {
         Sphere sphere;
         sphere.radius = 1.f;
-        sphere.material.ambient = colors[i] * 0.1f;
-        sphere.material.diffuse = colors[i];
+        sphere.material.ambient = colors[i % 4] * 0.1f;
+        sphere.material.diffuse = colors[i % 4];
         sphere.material.specularExponent = 20;
-        sphere.material.reflectivity = 0.1f * 0;
-        sphere.material.transparency = 0.6f;
+        sphere.material.reflectivity = 0.3f;
+        sphere.material.transparency = 0.8f;
         sphere.material.refractiveIndex = 1.5f;
-        sphere.transform = glm::translate(sphere.transform, glm::vec3(i * 2 - 2, 0, 0));
+        sphere.transform = glm::translate(sphere.transform, glm::vec3(i * 3 - 2, 0, i * .5f));
         scene.spheres.push_back(sphere);
     }
 
@@ -38,6 +38,7 @@ void buildTestScene(scene::Scene& scene)
     ground.material.diffuse = glm::vec4(.4f, .4f, .4f, 1);
     ground.material.ambient = ground.material.diffuse * 0.05f;
     ground.material.reflectivity = 0.5f;
+    ground.material.checkerboard = true;
     scene.planes.push_back(ground);
 
     PointLight light;
@@ -48,7 +49,8 @@ void buildTestScene(scene::Scene& scene)
 
     Camera camera;
     camera.projection = glm::perspective(45.f, 4.f / 3.f, .1f, 100.f);
-    camera.transform = glm::lookAt(glm::vec3(-6, -0.8f, 6), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    camera.transform = glm::lookAt(glm::vec3(-6, -0.8f, 4), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
+    //camera.transform = glm::lookAt(glm::vec3(-10, -2, 1), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
     scene.camera = camera;
 
     scene.backgroundColor = glm::vec4(.2f, .2f, .2f, 1);

@@ -17,7 +17,7 @@ const float g_surfaceEpsilon = 0.001f;
 
 Renderer::Renderer(scene::Scene* scene):
     m_scene(scene),
-    m_depthLimit(3)
+    m_depthLimit(4)
 {
     prepare();
 }
@@ -200,6 +200,12 @@ glm::vec4 Renderer::sample(const Ray& ray, int depth) const
     glm::vec4 color = ray.material->ambient;
     color.a = 1.f;
 
+    if (ray.material->checkerboard)
+    {
+        if ((fmod(fmod(ray.hitPos.x, 1) + 1, 1) < 0.5f) ^ (fmod(fmod(ray.hitPos.z, 1) + 1, 1) < 0.5f))
+            color.rgb = glm::vec3(color.rgb) * 4.f;
+    }
+
     if (!internalIntersection)
         applyAllLights(m_scene->pointLights, m_precalcScene.pointLightTransforms, ray, color);
     else
@@ -208,28 +214,21 @@ glm::vec4 Renderer::sample(const Ray& ray, int depth) const
     // Refraction
     if (ray.material->transparency && depth < m_depthLimit)
     {
-        Ray refractedRay;
-        glm::vec3 normal = glm::faceforward(ray.normal, ray.direction, ray.normal);
-        // Intersecting objects not supported
+        // Intersecting transparent objects not supported
         float eta = 1.f / ray.material->refractiveIndex;
+        glm::vec3 normal = ray.normal;
         if (internalIntersection)
         {
             // Leaving the material
             eta = 1.f / eta;
+            normal = -normal;
         }
+        Ray refractedRay;
         refractedRay.direction = glm::normalize(glm::refract(ray.direction, normal, eta));
-        if (depth == 0 && 0)
-        {
-            printf("---\n");
-            dump(normal);
-            dump(ray.direction);
-            dump(refractedRay.direction);
-        }
-        //refractedRay.direction = ray.direction;
         refractedRay.origin = ray.hitPos + refractedRay.direction * g_surfaceEpsilon;
 
         if (trace(refractedRay))
-            color = glm::mix(color, sample(refractedRay, depth + 1), ray.material->transparency);
+            color += sample(refractedRay, depth + 1) * ray.material->transparency;
     }
 
     // Reflection
@@ -240,7 +239,7 @@ glm::vec4 Renderer::sample(const Ray& ray, int depth) const
         reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
 
         if (trace(reflectedRay))
-            color = glm::mix(color, sample(reflectedRay, depth + 1), ray.material->reflectivity);
+            color += sample(reflectedRay, depth + 1) * ray.material->reflectivity;
     }
 
     //color = ray.material->color;
@@ -263,7 +262,7 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
         for (int x = xOffset; x < xOffset + width; x++)
         {
             float wx = static_cast<float>(x) / surface.width;
-            float wy = static_cast<float>(y) / surface.height;
+            float wy = 1 - static_cast<float>(y) / surface.height;
             glm::vec3 direction = p1 + (p2 - p1) * wx + (p3 - p1) * wy - origin;
             direction = glm::normalize(direction);
 

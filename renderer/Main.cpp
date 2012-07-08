@@ -8,6 +8,10 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <lodepng.h>
+#include <unistd.h>
+#include <future>
+#include <vector>
+#include <algorithm>
 
 void buildTestScene(scene::Scene& scene)
 {
@@ -16,9 +20,9 @@ void buildTestScene(scene::Scene& scene)
     glm::vec4 colors[] =
     {
         glm::vec4(1, 1, 1, 1),
-        glm::vec4(.8f, 0, 0, 1),
-        glm::vec4(0, .8f, 0, 1),
-        glm::vec4(0, 0, .8f, 1),
+        glm::vec4(.8f, .1f, .1f, 1),
+        glm::vec4(.1f, .8f, .1f, 1),
+        glm::vec4(.1f, .1f, .8f, 1),
     };
 
     for (int i = 0; i < 4; i++)
@@ -85,10 +89,37 @@ void buildTestScene(scene::Scene& scene)
     scene.backgroundColor = glm::vec4(.2f, .2f, .2f, 1);
 }
 
+int cpuCount()
+{
+    return sysconf(_SC_NPROCESSORS_ONLN);
+}
+
 void render(Surface& surface, scene::Scene& scene)
 {
     Renderer renderer(&scene);
-    renderer.render(surface, 0, 0, surface.width, surface.height);
+
+    std::vector<std::future<void>> tasks;
+    int slice = (surface.height + 1) / cpuCount();
+
+    for (int y = 0; y < surface.height; y += slice)
+    {
+        auto task = std::async(std::launch::async, [=, &renderer, &surface] {
+            renderer.render(surface, 0, y, surface.width, slice);
+        });
+        tasks.push_back(std::move(task));
+        printf(".");
+    }
+    printf("\r");
+    fflush(stdout);
+
+    while (tasks.size())
+    {
+        tasks.back().wait();
+        tasks.pop_back();
+        printf("#");
+        fflush(stdout);
+    }
+    printf("\n");
 }
 
 void save(Surface& surface, const std::string& fileName)

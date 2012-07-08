@@ -1,3 +1,5 @@
+find_package(Threads)
+
 add_executable(
     renderer
     Main.cpp
@@ -17,4 +19,4 @@ add_executable(
     Util.h
 )
 
-target_link_libraries(renderer scene lodepng)
+target_link_libraries(renderer scene lodepng ${CMAKE_THREAD_LIBS_INIT})

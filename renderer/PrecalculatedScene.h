@@ -26,7 +26,6 @@ public:
 
     TransformDataList sphereTransforms;
     TransformDataList planeTransforms;
-    TransformDataList pointLightTransforms;
 
 private:
     void prepare();

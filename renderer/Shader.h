@@ -26,20 +26,16 @@ class Shader
 public:
     Shader(scene::Scene* scene, Raytracer* raytracer);
 
-    glm::vec4 shade(const Ray& ray, int depth = 0) const;
+    glm::vec4 shade(const Ray& ray, bool indirectLightOnly = false, int depth = 0) const;
 
 private:
-    template <typename LightType>
-    void applyAllLights(const std::vector<LightType>& lights,
-                        const TransformDataList& transformDataList,
-                        const Ray& ray, glm::vec4& color) const;
+    template <typename ObjectType>
+    void applyAllEmissiveObjects(const std::vector<ObjectType>& lights,
+                                 const TransformDataList& transformDataList,
+                                 const Ray& ray, glm::vec4& color) const;
 
-    float lightOcclusion(const Ray& ray, const scene::PointLight& light,
-                         const TransformData& data) const;
-
-    void applyLight(const Ray& ray, glm::vec4& color, float occlusion,
-                    const scene::PointLight& light,
-                    const TransformData& data) const;
+    void applyEmissiveObject(const scene::Sphere& sphere, const TransformData& data,
+                             const Ray& ray, glm::vec4& color) const;
 
     scene::Scene* m_scene;
     Raytracer* m_raytracer;

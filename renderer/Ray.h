@@ -3,6 +3,7 @@
 #define RAY_H
 
 #include <glm/glm.hpp>
+#include <cstdint>
 
 namespace scene
 {
@@ -17,8 +18,10 @@ public:
     glm::vec3 origin;
     glm::vec3 direction;
 
+    bool hit() const;
+
     // Result
-    bool hit;
+    intptr_t objectId;
     float minDistance; // Assumed to be >= 0
     float maxDistance;
     glm::vec3 normal;

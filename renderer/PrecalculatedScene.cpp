@@ -14,7 +14,6 @@ void PrecalculatedScene::prepare()
 {
     prepareAll(m_scene->spheres, sphereTransforms);
     prepareAll(m_scene->planes, planeTransforms);
-    prepareAll(m_scene->pointLights, pointLightTransforms);
 }
 
 template <typename ObjectType>

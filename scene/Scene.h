@@ -15,6 +15,7 @@ public:
 
     glm::vec4 ambient;
     glm::vec4 diffuse;
+    glm::vec4 emission;
     float specularExponent;
     float reflectivity;
     float transparency;
@@ -39,16 +40,6 @@ public:
     Material material;
 };
 
-class PointLight
-{
-public:
-    PointLight();
-
-    glm::mat4 transform;
-    glm::vec4 color;
-    float intensity;
-};
-
 class Camera
 {
 public:
@@ -58,7 +49,6 @@ public:
 
 typedef std::vector<Sphere> SphereList;
 typedef std::vector<Plane> PlaneList;
-typedef std::vector<PointLight> PointLightList;
 
 class Scene
 {
@@ -71,7 +61,6 @@ public:
 
     SphereList spheres;
     PlaneList planes;
-    PointLightList pointLights;
 };
 
 } // namespace scene

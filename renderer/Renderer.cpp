@@ -14,7 +14,7 @@ Renderer::Renderer(scene::Scene* scene):
     m_scene(scene),
     m_raytracer(new Raytracer(scene)),
     m_shader(new Shader(scene, m_raytracer.get())),
-    m_samples(8)
+    m_samples(16)
 {
 }
 
@@ -49,6 +49,7 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                 m_raytracer->trace(ray);
                 color += m_shader->shade(ray) * (1.f / m_samples);
             }
+            color.a = 1;
             surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(color);
         }
     }

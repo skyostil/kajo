@@ -54,8 +54,9 @@ void Raytracer::intersect(Ray& ray, const scene::Sphere& sphere, const Transform
 
     glm::vec3 normal = origin + dir * t0;
     normal = glm::normalize(glm::mat3(sphere.transform) * normal);
+    intptr_t objectId = reinterpret_cast<intptr_t>(&sphere);
 
-    processIntersection(ray, t0 * data.determinant, normal, &sphere.material);
+    processIntersection(ray, t0 * data.determinant, objectId, normal, &sphere.material);
 }
 
 void Raytracer::intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const
@@ -75,8 +76,9 @@ void Raytracer::intersect(Ray& ray, const scene::Plane& plane, const TransformDa
         return;
 
     normal = glm::mat3(plane.transform) * -normal;
+    intptr_t objectId = reinterpret_cast<intptr_t>(&plane);
 
-    processIntersection(ray, t * data.determinant, normal, &plane.material);
+    processIntersection(ray, t * data.determinant, objectId, normal, &plane.material);
 }
 
 template <typename ObjectType>
@@ -91,13 +93,14 @@ void Raytracer::intersectAll(const std::vector<ObjectType>& objects,
 }
 
 void Raytracer::processIntersection(Ray& ray, float t,
-                                   const glm::vec3& normal,
-                                   const scene::Material* material) const
+                                    intptr_t objectId,
+                                    const glm::vec3& normal,
+                                    const scene::Material* material) const
 {
     if (t > ray.maxDistance || t < ray.minDistance)
         return;
 
-    ray.hit = true;
+    ray.objectId = objectId;
     ray.maxDistance = t;
     ray.normal = normal;
     ray.material = material;
@@ -108,7 +111,7 @@ bool Raytracer::trace(Ray& ray) const
     intersectAll(m_scene->planes, m_precalcScene->planeTransforms, ray);
     intersectAll(m_scene->spheres, m_precalcScene->sphereTransforms, ray);
 
-    if (!ray.hit)
+    if (!ray.hit())
         return false;
 
     ray.hitPos = ray.origin + ray.direction * ray.maxDistance;

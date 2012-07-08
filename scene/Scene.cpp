@@ -15,8 +15,3 @@ Material::Material():
     checkerboard(false)
 {
 };
-
-PointLight::PointLight():
-    intensity(1)
-{
-}

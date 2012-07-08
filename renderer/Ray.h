@@ -14,13 +14,13 @@ class Ray
 public:
     Ray();
 
-    bool hit() const;
-
     glm::vec3 origin;
     glm::vec3 direction;
 
     // Result
-    float nearest;
+    bool hit;
+    float minDistance; // Assumed to be >= 0
+    float maxDistance;
     glm::vec3 normal;
     glm::vec3 hitPos;
     const scene::Material* material;

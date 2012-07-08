@@ -94,10 +94,11 @@ void Raytracer::processIntersection(Ray& ray, float t,
                                    const glm::vec3& normal,
                                    const scene::Material* material) const
 {
-    if (t > ray.nearest)
+    if (t > ray.maxDistance || t < ray.minDistance)
         return;
 
-    ray.nearest = t;
+    ray.hit = true;
+    ray.maxDistance = t;
     ray.normal = normal;
     ray.material = material;
 }
@@ -107,9 +108,9 @@ bool Raytracer::trace(Ray& ray) const
     intersectAll(m_scene->planes, m_precalcScene->planeTransforms, ray);
     intersectAll(m_scene->spheres, m_precalcScene->sphereTransforms, ray);
 
-    if (!ray.hit())
+    if (!ray.hit)
         return false;
 
-    ray.hitPos = ray.origin + ray.direction * ray.nearest;
+    ray.hitPos = ray.origin + ray.direction * ray.maxDistance;
     return true;
 }

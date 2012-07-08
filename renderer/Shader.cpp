@@ -39,16 +39,16 @@ float Shader::lightOcclusion(const Ray& ray, const scene::PointLight& light,
 {
     glm::vec3 lightPos(light.transform * glm::vec4(0, 0, 0, 1));
     glm::vec3 dir(lightPos - ray.hitPos);
-    float lightDist = glm::dot(dir, dir);
 
     Ray shadowRay;
     shadowRay.direction = glm::normalize(dir);
     shadowRay.origin = ray.hitPos + shadowRay.direction * g_surfaceEpsilon;
+    shadowRay.maxDistance = glm::length(dir);
 
     if (!m_raytracer->trace(shadowRay))
         return 1;
 
-    return (shadowRay.nearest * shadowRay.nearest < lightDist) ? 0 : 1;
+    return 0;
 }
 
 void Shader::applyLight(const Ray& ray, glm::vec4& color, float occlusion,
@@ -81,7 +81,7 @@ void Shader::applyLight(const Ray& ray, glm::vec4& color, float occlusion,
 
 glm::vec4 Shader::shade(const Ray& ray, int depth) const
 {
-    if (!ray.hit() || !ray.material)
+    if (!ray.hit || !ray.material)
         return m_scene->backgroundColor;
 
     bool internalIntersection = (glm::dot(ray.direction, ray.normal) >= 0);

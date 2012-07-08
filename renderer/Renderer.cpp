@@ -119,7 +119,12 @@ bool Renderer::trace(Ray& ray) const
 {
     intersectAll(m_scene->planes, m_precalcScene.planeTransforms, ray);
     intersectAll(m_scene->spheres, m_precalcScene.sphereTransforms, ray);
-    return ray.hit();
+
+    if (!ray.hit())
+        return false;
+
+    ray.hitPos = ray.origin + ray.direction * ray.nearest;
+    return true;
 }
 
 template <typename LightType>
@@ -137,16 +142,13 @@ void Renderer::applyAllLights(const std::vector<LightType>& lights,
 float Renderer::lightOcclusion(const Ray& ray, const scene::PointLight& light,
                                const TransformData& data) const
 {
-    glm::vec3 hitPos = ray.origin + ray.direction * ray.nearest;
     glm::vec3 lightPos(light.transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 dir = hitPos - lightPos;
+    glm::vec3 dir = ray.hitPos - lightPos;
     float lightDist = glm::dot(dir, dir);
 
     Ray shadowRay;
-    shadowRay.origin = hitPos;
     shadowRay.direction = glm::normalize(dir);
-
-    shadowRay.origin += shadowRay.direction * 0.01f;
+    shadowRay.origin = ray.hitPos + shadowRay.direction * 0.01f;
 
     if (!trace(shadowRay))
         return 1;
@@ -182,7 +184,7 @@ void Renderer::applyLight(const Ray& ray, glm::vec4& color, float occlusion,
     }
 }
 
-glm::vec4 Renderer::sample(const Ray& ray) const
+glm::vec4 Renderer::sample(const Ray& ray, int depth) const
 {
     if (!ray.hit() || !ray.material)
         return m_scene->backgroundColor;
@@ -190,6 +192,18 @@ glm::vec4 Renderer::sample(const Ray& ray) const
     glm::vec4 color = ray.material->ambient;
     color.a = 1.f;
     applyAllLights(m_scene->pointLights, m_precalcScene.pointLightTransforms, ray, color);
+
+    if (!ray.material->reflectivity || depth > 1)
+        return color;
+
+    Ray reflectedRay;
+    reflectedRay.direction = glm::reflect(ray.direction, ray.normal);
+    reflectedRay.origin = ray.hitPos + reflectedRay.direction * 0.01f;
+
+    if (!trace(reflectedRay))
+        return color;
+
+    color += ray.material->reflectivity * sample(reflectedRay, depth + 1);
 
     //color = ray.material->color;
     //color = glm::vec4(-ray.normal, 1.f);

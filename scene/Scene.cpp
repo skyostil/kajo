@@ -8,7 +8,8 @@ Scene::Scene()
 };
 
 Material::Material():
-    specularExponent(0)
+    specularExponent(0),
+    reflectivity(0)
 {
 };
 

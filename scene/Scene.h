@@ -16,6 +16,7 @@ public:
     glm::vec4 ambient;
     glm::vec4 diffuse;
     float specularExponent;
+    float reflectivity;
 };
 
 class Sphere

@@ -42,7 +42,7 @@ public:
     void render(Surface& surface, int xOffset, int yOffset, int width, int height) const;
 
     bool trace(Ray& ray) const;
-    glm::vec4 sample(const Ray& ray) const;
+    glm::vec4 sample(const Ray& ray, int depth = 0) const;
 
 private:
     void prepare();

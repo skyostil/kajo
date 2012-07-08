@@ -22,6 +22,7 @@ public:
     // Result
     float nearest;
     glm::vec3 normal;
+    glm::vec3 hitPos;
     const scene::Material* material;
 };
 

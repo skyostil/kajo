@@ -8,11 +8,13 @@
 #include "scene/Scene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/random.hpp>
 
 Renderer::Renderer(scene::Scene* scene):
     m_scene(scene),
     m_raytracer(new Raytracer(scene)),
-    m_shader(new Shader(scene, m_raytracer.get()))
+    m_shader(new Shader(scene, m_raytracer.get())),
+    m_samples(8)
 {
 }
 
@@ -26,22 +28,27 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
     glm::vec3 p3 = glm::unProject(glm::vec3(0.f, 1.f, 0.f), camera.transform, camera.projection, viewport);
     glm::vec3 origin(glm::inverse(camera.transform) * glm::vec4(0.f, 0.f, 0.f, 1.f));
 
+    float pixelWidth = 1.f / surface.width;
+    float pixelHeight = 1.f / surface.height;
     for (int y = yOffset; y < yOffset + height; y++)
     {
         for (int x = xOffset; x < xOffset + width; x++)
         {
-            float wx = static_cast<float>(x) / surface.width;
-            float wy = 1 - static_cast<float>(y) / surface.height;
-            glm::vec3 direction = p1 + (p2 - p1) * wx + (p3 - p1) * wy - origin;
-            direction = glm::normalize(direction);
+            glm::vec4 color;
+            for (unsigned s = 0; s < m_samples; s++)
+            {
+                float sx = x * pixelWidth + pixelWidth * glm::compRand1<float>();
+                float sy = (surface.height - y) * pixelHeight + pixelHeight * glm::compRand1<float>();
+                glm::vec3 direction = p1 + (p2 - p1) * sx + (p3 - p1) * sy - origin;
+                direction = glm::normalize(direction);
 
-            Ray ray;
-            ray.origin = origin;
-            ray.direction = direction;
+                Ray ray;
+                ray.origin = origin;
+                ray.direction = direction;
 
-            m_raytracer->trace(ray);
-            glm::vec4 color = m_shader->shade(ray);
-
+                m_raytracer->trace(ray);
+                color += m_shader->shade(ray) * (1.f / m_samples);
+            }
             surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(color);
         }
     }

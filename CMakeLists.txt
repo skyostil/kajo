@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 project(rayska)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-  add_definitions(-ffast-math)
+  add_definitions(-O3 -march=native -mtune=native -ffast-math)
   add_definitions(-std=c++0x)
   add_definitions(-Wall)
   add_definitions(-Wno-comment) # glm bug

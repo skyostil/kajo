@@ -24,6 +24,7 @@ private:
     scene::Scene* m_scene;
     std::unique_ptr<Raytracer> m_raytracer;
     std::unique_ptr<Shader> m_shader;
+    unsigned m_samples;
 };
 
 #endif

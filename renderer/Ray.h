@@ -25,6 +25,8 @@ public:
     float minDistance; // Assumed to be >= 0
     float maxDistance;
     glm::vec3 normal;
+    glm::vec3 tangent;
+    glm::vec3 binormal;
     glm::vec3 hitPos;
     const scene::Material* material;
 };

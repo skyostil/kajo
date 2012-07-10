@@ -55,8 +55,22 @@ void Raytracer::intersect(Ray& ray, const scene::Sphere& sphere, const Transform
     glm::vec3 normal = origin + dir * t0;
     normal = glm::normalize(glm::mat3(sphere.transform) * normal);
     intptr_t objectId = reinterpret_cast<intptr_t>(&sphere);
+#if 0
+    glm::vec3 tangent;
+    float smallest = std::min(normal.z, std::min(normal.x, normal.y));
+    if (normal.x == smallest)
+        tangent = glm::vec3(0, -normal.z, normal.y);
+    else if (normal.y == smallest)
+        tangent = glm::vec3(-normal.z, 0, normal.x);
+    else
+        tangent = glm::vec3(-normal.y, normal.x, 0);
+    tangent = glm::normalize(tangent);
+#endif
+    glm::vec3 tangent = glm::cross(normal, glm::vec3(0.f, 1.f, 0.f));
+    glm::vec3 binormal = glm::cross(normal, tangent);
 
-    processIntersection(ray, t0 * data.determinant, objectId, normal, &sphere.material);
+    processIntersection(ray, t0 * data.determinant, objectId, normal,
+                        tangent, binormal, &sphere.material);
 }
 
 void Raytracer::intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const
@@ -76,9 +90,13 @@ void Raytracer::intersect(Ray& ray, const scene::Plane& plane, const TransformDa
         return;
 
     normal = glm::mat3(plane.transform) * -normal;
+    glm::vec3 tangent = glm::mat3(plane.transform) * glm::vec3(1, 0, 0);
+    glm::vec3 binormal = glm::cross(normal, tangent);
+
     intptr_t objectId = reinterpret_cast<intptr_t>(&plane);
 
-    processIntersection(ray, t * data.determinant, objectId, normal, &plane.material);
+    processIntersection(ray, t * data.determinant, objectId, normal,
+                        tangent, binormal, &plane.material);
 }
 
 template <typename ObjectType>
@@ -95,6 +113,8 @@ void Raytracer::intersectAll(const std::vector<ObjectType>& objects,
 void Raytracer::processIntersection(Ray& ray, float t,
                                     intptr_t objectId,
                                     const glm::vec3& normal,
+                                    const glm::vec3& tangent,
+                                    const glm::vec3& binormal,
                                     const scene::Material* material) const
 {
     if (t > ray.maxDistance || t < ray.minDistance)
@@ -103,6 +123,8 @@ void Raytracer::processIntersection(Ray& ray, float t,
     ray.objectId = objectId;
     ray.maxDistance = t;
     ray.normal = normal;
+    ray.tangent = tangent;
+    ray.binormal = binormal;
     ray.material = material;
 }
 

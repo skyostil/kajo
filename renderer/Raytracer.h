@@ -39,20 +39,9 @@ private:
     void intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const;
 
     void processIntersection(Ray& ray, float t, intptr_t objectId,
-                             const glm::vec3& normal,
+                             const glm::vec3& normal, const glm::vec3& tangent,
+                             const glm::vec3& binormal,
                              const scene::Material* material) const;
-
-    template <typename LightType>
-    void applyAllLights(const std::vector<LightType>& lights,
-                        const TransformDataList& transformDataList,
-                        const Ray& ray, glm::vec4& color) const;
-
-    float lightOcclusion(const Ray& ray, const scene::PointLight& light,
-                         const TransformData& data) const;
-
-    void applyLight(const Ray& ray, glm::vec4& color, float occlusion,
-                    const scene::PointLight& light,
-                    const TransformData& data) const;
 
     scene::Scene* m_scene;
     std::unique_ptr<PrecalculatedScene> m_precalcScene;

@@ -117,20 +117,8 @@ glm::vec4 Shader::shade(const Ray& ray, Random& random, bool indirectLightOnly, 
     // Diffuse reflection
     if (!exitingMaterial)
     {
-        glm::vec3 dir = random.generateSpherical();
-        if (glm::dot(dir, ray.normal) < 0)
-            dir = -dir;
-#if 0
-        float fi = glm::linearRand(0.f, 1.f);
-        float psi = glm::linearRand(0.f, 1.f);
-        dir = glm::vec3(sqrtf(1.f - fi) * cos(2 * M_PI * psi),
-                        sqrtf(1.f - fi) * sin(2 * M_PI * psi),
-                        sqrt(fi));
-        float x = glm::angle(ray.normal, glm::vec3(1, 0, 0));
-        float y = glm::angle(ray.normal, glm::vec3(0, 1, 0));
-        dir = glm::rotateX(dir, x);
-        dir = glm::rotateY(dir, y);
-#endif
+        glm::vec3 dir = random.generateCosineHemisphere();
+        dir = ray.normal * dir.x + ray.tangent * dir.y + ray.binormal * dir.z;
 
         Ray reflectedRay;
         reflectedRay.direction = dir;
@@ -153,5 +141,7 @@ glm::vec4 Shader::shade(const Ray& ray, Random& random, bool indirectLightOnly, 
 
     //color = ray.material->color;
     //color = glm::vec4(-ray.normal, 1.f);
+    //color = glm::vec4(ray.tangent, 1.f);
+    //color = glm::vec4(-ray.binormal, 1.f);
     return color;
 }

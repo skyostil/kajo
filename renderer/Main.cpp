@@ -48,7 +48,7 @@ void buildTestScene(scene::Scene& scene)
     Sphere sphere;
     sphere.radius = .3f;
     sphere.material.emission = glm::vec4(1, 1, 1, 0) * 128.f;
-    sphere.transform = glm::translate(sphere.transform, glm::vec3(0, -2, 2));
+    sphere.transform = glm::translate(sphere.transform, glm::vec3(0, -1.5, 2));
     scene.spheres.push_back(sphere);
 
     Plane ground;
@@ -72,6 +72,20 @@ void buildTestScene(scene::Scene& scene)
     wall2.material.diffuse = glm::vec4(1.f, 1.f, 1.f, 1);
     wall2.material.ambient = ground.material.diffuse * 0.05f;
     scene.planes.push_back(wall2);
+
+    Plane wall3;
+    wall3.transform = glm::rotate(wall3.transform, 90.f, glm::vec3(0, 0, 1));
+    wall3.transform = glm::translate(wall3.transform, glm::vec3(0, 8, 0));
+    wall3.material.diffuse = glm::vec4(1.f, 1.f, 1.f, 1);
+    wall3.material.ambient = ground.material.diffuse * 0.05f;
+    scene.planes.push_back(wall3);
+
+    Plane wall4;
+    wall4.transform = glm::rotate(wall4.transform, 90.f, glm::vec3(1, 0, 0));
+    wall4.transform = glm::translate(wall4.transform, glm::vec3(0, 6, 0));
+    wall4.material.diffuse = glm::vec4(1.f, 1.f, 1.f, 1);
+    wall4.material.ambient = ground.material.diffuse * 0.05f;
+    scene.planes.push_back(wall4);
 
     Plane ceiling;
     ceiling.transform = glm::rotate(ceiling.transform, 180.f, glm::vec3(1, 0, 0));

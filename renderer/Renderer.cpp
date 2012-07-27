@@ -35,7 +35,7 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
     {
         for (int x = xOffset; x < xOffset + width; x++)
         {
-            glm::vec4 color;
+            glm::vec4 radiance;
             for (unsigned s = 0; s < m_samples; s++)
             {
                 glm::vec4 offset = random.generate();
@@ -49,10 +49,11 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                 ray.direction = direction;
 
                 m_raytracer->trace(ray);
-                color += m_shader->shade(ray, random) * (1.f / m_samples);
+                radiance += m_shader->shade(ray, random) * (1.f / m_samples);
             }
-            color.a = 1;
-            surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(color);
+            glm::vec4 pixel = Surface::linearToSRGB(glm::clamp(radiance, glm::vec4(0), glm::vec4(1)));
+            pixel.a = 1;
+            surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(pixel);
         }
     }
 }

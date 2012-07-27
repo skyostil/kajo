@@ -6,12 +6,14 @@
 
 #include <memory>
 #include <stdint.h>
+#include <glm/glm.hpp>
 
 class Surface
 {
 public:
     Surface(int width, int height);
 
+    static glm::vec4 linearToSRGB(const glm::vec4& color);
     static uint32_t colorToRGBA8(const glm::vec4& color);
 
     int width;

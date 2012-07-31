@@ -47,3 +47,16 @@ glm::vec4 Random::generate()
 #endif
     return result;
 }
+
+glm::vec3 Random::generateSpherical()
+{
+    glm::vec4 sample(generate());
+    glm::vec3 result;
+
+    result.z = sample.x;
+    float phi = (result.y * .5f + .5) * 2 * M_PI;
+    float theta = asinf(result.z);
+    result.x = cosf(theta) * cosf(phi);
+    result.y = cosf(theta) * sinf(phi);
+    return result;
+}

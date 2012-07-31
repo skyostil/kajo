@@ -4,10 +4,6 @@
 
 #include <glm/glm.hpp>
 
-#if defined(USE_VECTORIZED_MATH)
-#    define USE_SSE2
-#endif
-
 #if defined(USE_SSE2)
 #    include <pmmintrin.h>
 #endif
@@ -24,6 +20,8 @@ public:
      *  distribution [-1..1]
      */
     glm::vec4 generate();
+
+    glm::vec3 generateSpherical();
 private:
 #if defined(USE_SSE2)
     __m128i m_state;

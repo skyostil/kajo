@@ -2,9 +2,23 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
 project(rayska)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-  add_definitions(-O3 -march=native -mtune=native -ffast-math)
+# -----------------------------------------------------------------------
+# Check whether we compile with CLANG.
+# -----------------------------------------------------------------------
+set(COMPILER_IS_CLANG FALSE)
+if(CMAKE_CXX_COMPILER MATCHES "clang\\+\\+")
+  set(COMPILER_IS_CLANG TRUE)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
+  add_definitions(-O3 -ffast-math)
   add_definitions(-std=c++0x)
+  if(NOT APPLE)
+    add_definitions(-march=native -mtune=native)
+  else()
+    add_definitions(-stdlib=libc++) # Use clang's c++ standard library
+    link_libraries(-stdlib=libc++)
+  endif()
   add_definitions(-Wall)
   add_definitions(-Wno-comment) # glm bug
 endif()

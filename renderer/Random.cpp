@@ -22,7 +22,7 @@ static const __m128 g_invScale = _mm_set1_ps(1.0f / 0x7fffffff);
 
 glm::vec4 Random::generate()
 {
-    glm::vec4 result;
+    glm::vec4 result __attribute__((aligned(16)));
 #if defined(USE_SSE2)
     __m128i tmp1, tmp2;
     __m128 res;

@@ -10,6 +10,7 @@
 #    include <stdint.h>
 #endif
 
+// TODO: Use alignas(__m128i) once the compilers support it
 class Random
 {
 public:

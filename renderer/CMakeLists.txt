@@ -1,10 +1,13 @@
 find_package(Threads)
+find_package(SDL)
 
 add_executable(
     renderer
     Main.cpp
     PrecalculatedScene.cpp
     PrecalculatedScene.h
+    Preview.cpp
+    Preview.h
     Random.cpp
     Random.h
     Ray.cpp
@@ -21,4 +24,9 @@ add_executable(
     Util.h
 )
 
-target_link_libraries(renderer scene lodepng ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(
+    renderer
+    scene
+    lodepng
+    ${SDL_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT})

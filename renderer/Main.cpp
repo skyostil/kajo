@@ -1,8 +1,10 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#include "Renderer.h"
+#include "Preview.h"
+#include "Queue.h"
 #include "Raytracer.h"
-#include "Surface.h"
+#include "Renderer.h"
 #include "Shader.h"
+#include "Surface.h"
 #include "scene/Scene.h"
 
 #include <iostream>
@@ -108,32 +110,58 @@ int cpuCount()
     return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
-void render(Surface& surface, scene::Scene& scene)
+struct RenderUpdate
 {
-    Renderer renderer(&scene);
+    int xOffset, yOffset, width, height;
+};
 
-    std::vector<std::future<void>> tasks;
+typedef std::vector<std::future<void>> RenderTasks;
+
+void createTasks(Surface& surface, Renderer& renderer, RenderTasks& tasks)
+{
     int slice = (surface.height + 1) / cpuCount();
-
     for (int y = 0; y < surface.height; y += slice)
     {
         auto task = std::async(std::launch::async, [=, &renderer, &surface] {
             renderer.render(surface, 0, y, surface.width, slice);
         });
         tasks.push_back(std::move(task));
-        printf(".");
     }
-    printf("\r");
-    fflush(stdout);
+}
 
+void joinTasks(RenderTasks& tasks)
+{
     while (tasks.size())
     {
         tasks.back().wait();
         tasks.pop_back();
-        printf("#");
-        fflush(stdout);
     }
-    printf("\n");
+}
+
+void render(Surface& surface, scene::Scene& scene)
+{
+    Renderer renderer(&scene);
+    std::unique_ptr<Preview> preview(Preview::create(&surface));
+    bool done = false;
+
+    Queue<RenderUpdate> updateQueue;
+    renderer.setObserver([&updateQueue, &done] (int xOffset, int yOffset, int width, int height) {
+        updateQueue.push(RenderUpdate{xOffset, yOffset, width, height});
+        return !done;
+    });
+
+    RenderTasks tasks;
+    createTasks(surface, renderer, tasks);
+
+    while (preview->processEvents())
+    {
+        RenderUpdate update;
+        if (updateQueue.pop(update, std::chrono::milliseconds(500)))
+            preview->update(update.xOffset, update.yOffset, update.width, update.height);
+    }
+
+    done = true;
+    joinTasks(tasks);
 }
 
 void save(Surface& surface, const std::string& fileName)

@@ -13,11 +13,14 @@ namespace scene
     class Scene;
 }
 
+typedef std::function<bool(int xOffset, int yOffset, int width, int height)> RenderObserver;
+
 class Renderer
 {
 public:
     Renderer(scene::Scene* scene);
 
+    void setObserver(RenderObserver observer);
     void render(Surface& surface, int xOffset, int yOffset, int width, int height) const;
 
 private:
@@ -25,6 +28,7 @@ private:
     std::unique_ptr<Raytracer> m_raytracer;
     std::unique_ptr<Shader> m_shader;
     unsigned m_samples;
+    RenderObserver m_observer;
 };
 
 #endif

@@ -55,5 +55,12 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
             pixel.a = 1;
             surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(pixel);
         }
+        if (m_observer && !m_observer(0, y, width, 1))
+            break;
     }
+}
+
+void Renderer::setObserver(RenderObserver observer)
+{
+    m_observer = observer;
 }

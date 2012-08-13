@@ -1,5 +1,5 @@
 find_package(Threads)
-find_package(SDL)
+find_package(SDL REQUIRED)
 
 add_executable(
     renderer

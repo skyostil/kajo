@@ -1,5 +1,7 @@
 // Copyright (C) 2012 Sami Kyöstilä
+
 #include "Random.h"
+#include <algorithm>
 
 Random::Random(unsigned seed)
 {
@@ -50,13 +52,25 @@ glm::vec4 Random::generate()
 
 glm::vec3 Random::generateSpherical()
 {
-    glm::vec4 sample(generate());
-    glm::vec3 result;
+    glm::vec4 sample = generate();
+    sample.y = (sample.y + 1) * M_PI;
+    float r = sqrtf(1 - sample.x * sample.x);
 
+    glm::vec3 result;
+    result.x = r * cosf(sample.y);
+    result.y = r * sinf(sample.y);
     result.z = sample.x;
-    float phi = (result.y * .5f + .5) * 2 * M_PI;
-    float theta = asinf(result.z);
-    result.x = cosf(theta) * cosf(phi);
-    result.y = cosf(theta) * sinf(phi);
     return result;
+}
+
+glm::vec3 Random::generateCosineHemisphere()
+{
+    glm::vec4 sample = generate();
+    sample.x = .5f * sample.x + .5f;
+    float r = sqrtf(sample.x);
+    float theta = (sample.y + 1) * M_PI;
+    float x = r * cosf(theta);
+    float y = r * sinf(theta);
+    float z = sqrtf(std::max(0.f, 1.f - sample.x));
+    return glm::vec3(x, y, z);
 }

@@ -25,6 +25,9 @@ public:
     glm::vec4 generate();
 
     glm::vec3 generateSpherical();
+
+    glm::vec3 generateCosineHemisphere();
+
 private:
 #if defined(USE_SSE2)
     __m128i m_state;

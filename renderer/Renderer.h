@@ -13,7 +13,7 @@ namespace scene
     class Scene;
 }
 
-typedef std::function<bool(int xOffset, int yOffset, int width, int height)> RenderObserver;
+typedef std::function<bool(int pass, int xOffset, int yOffset, int width, int height)> RenderObserver;
 
 class Renderer
 {

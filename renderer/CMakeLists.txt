@@ -1,5 +1,6 @@
 find_package(Threads)
 find_package(SDL REQUIRED)
+find_package(SDL_ttf)
 
 add_executable(
     renderer
@@ -29,4 +30,5 @@ target_link_libraries(
     scene
     lodepng
     ${SDL_LIBRARY}
+    ${SDLTTF_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT})

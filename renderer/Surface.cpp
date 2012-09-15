@@ -1,6 +1,8 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
 #include "Surface.h"
+#include <iostream>
+#include <lodepng.h>
 
 Surface::Surface(int width, int height):
     width(width),
@@ -22,4 +24,17 @@ uint32_t Surface::colorToRGBA8(const glm::vec4& color)
     int a = static_cast<int>(color.a * 255.f + .5f);
     uint32_t pixel = (a << 24) | (r << 16) | (g << 8) | b;
     return pixel;
+}
+
+bool Surface::save(const std::string& fileName) const
+{
+    unsigned error =
+        lodepng::encode(fileName,
+                        reinterpret_cast<const unsigned char*>(&pixels[0]),
+                        width, height);
+    if (error)
+    {
+        std::cerr << "PNG encode failure: " << lodepng_error_text(error) << std::endl;
+    }
+    return !error;
 }

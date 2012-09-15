@@ -9,7 +9,6 @@
 
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
-#include <lodepng.h>
 #include <unistd.h>
 #include <future>
 #include <vector>
@@ -112,6 +111,8 @@ int cpuCount()
 
 struct RenderUpdate
 {
+    std::thread::id threadId;
+    int pass;
     int xOffset, yOffset, width, height;
 };
 
@@ -145,8 +146,9 @@ void render(Surface& surface, scene::Scene& scene)
     bool done = false;
 
     Queue<RenderUpdate> updateQueue;
-    renderer.setObserver([&updateQueue, &done] (int xOffset, int yOffset, int width, int height) {
-        updateQueue.push(RenderUpdate{xOffset, yOffset, width, height});
+    renderer.setObserver([&updateQueue, &done] (int pass, int xOffset, int yOffset, int width, int height) {
+        std::thread::id threadId = std::this_thread::get_id();
+        updateQueue.push(RenderUpdate{threadId, pass, xOffset, yOffset, width, height});
         return !done;
     });
 
@@ -157,23 +159,13 @@ void render(Surface& surface, scene::Scene& scene)
     {
         RenderUpdate update;
         if (updateQueue.pop(update, std::chrono::milliseconds(500)))
-            preview->update(update.xOffset, update.yOffset, update.width, update.height);
+            preview->update(update.threadId, update.pass,
+                            update.xOffset, update.yOffset,
+                            update.width, update.height);
     }
 
     done = true;
     joinTasks(tasks);
-}
-
-void save(Surface& surface, const std::string& fileName)
-{
-    unsigned error =
-        lodepng::encode(fileName,
-                        reinterpret_cast<const unsigned char*>(&surface.pixels[0]),
-                        surface.width, surface.height);
-    if (error)
-    {
-        std::cerr << "PNG encode failure: " << lodepng_error_text(error) << std::endl;
-    }
 }
 
 int main(int argc, char** argv)
@@ -184,5 +176,5 @@ int main(int argc, char** argv)
 
     Surface surface(640, 480);
     render(surface, scene);
-    save(surface, "out.png");
+    surface.save("out.png");
 }

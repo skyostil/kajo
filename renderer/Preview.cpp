@@ -2,45 +2,87 @@
 #include "Preview.h"
 #include "Surface.h"
 
-#include <SDL/SDL.h>
 #include <cstring>
+#include <iostream>
+#include <sstream>
+#include <SDL/SDL.h>
+
+const int fontSize = 16;
+const int statusLineHeight = fontSize + 5;
 
 std::unique_ptr<Preview> Preview::create(Surface* surface)
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
         return nullptr;
 
+    if (TTF_Init() == -1) {
+        std::cerr << "SDL_ttf: " << TTF_GetError() << std::endl;
+        return nullptr;
+    }
     std::unique_ptr<Preview> preview(new Preview(surface));
-    preview->m_screen = SDL_SetVideoMode(surface->width, surface->height, 32,
+
+    preview->m_font = TTF_OpenFont("../data/SourceSansPro-Regular.ttf", fontSize);
+    if (!preview->m_font) {
+        std::cerr << "SDL_ttf: " << TTF_GetError() << std::endl;
+        return nullptr;
+    }
+
+    preview->m_screen = SDL_SetVideoMode(surface->width, surface->height + statusLineHeight, 32,
                                          SDL_SWSURFACE);
     if (!preview->m_screen)
         return nullptr;
     SDL_WM_SetCaption("Rayno", "Rayno");
 
-    preview->update(0, 0, surface->width, surface->height);
+    preview->updateScreen(0, 0, surface->width, surface->height);
     return preview;
 }
 
 Preview::Preview(Surface* surface):
-    m_surface(surface)
+    m_surface(surface),
+    m_font(0),
+    m_startTime(std::chrono::monotonic_clock::now())
 {
 }
 
 Preview::~Preview()
 {
+    if (m_font)
+        TTF_CloseFont(m_font);
     if (m_screen)
         SDL_FreeSurface(m_screen);
+    TTF_Quit();
     SDL_Quit();
 }
 
-void Preview::update(int xOffset, int yOffset, int width, int height)
+void Preview::update(std::thread::id threadId, int pass, int xOffset, int yOffset, int width, int height)
+{
+    ThreadStatistics& stats = m_threadStatistics[threadId];
+    stats.samples += width * height;
+    stats.pass = pass;
+
+    auto now = std::chrono::monotonic_clock::now();
+    if (now - stats.startTime > std::chrono::seconds(1))
+    {
+        stats.samplesPerSecond = stats.samples - stats.startSamples;
+        stats.startSamples = stats.samples;
+        stats.startTime = now;
+    }
+
+    if (now - m_lastUpdate > std::chrono::milliseconds(100))
+    {
+        m_lastUpdate = now;
+        updateScreen(0, 0, m_surface->width, m_surface->height);
+    }
+}
+
+void Preview::updateScreen(int xOffset, int yOffset, int width, int height)
 {
     if (SDL_LockSurface(m_screen) != 0)
         return;
 
     assert(xOffset + width <= m_screen->w);
     assert(yOffset + height <= m_screen->h);
-    
+
     auto* src = &m_surface->pixels[0];
     auto* dest = reinterpret_cast<uint32_t*>(m_screen->pixels);
     size_t srcStride = m_surface->width;
@@ -57,7 +99,88 @@ void Preview::update(int xOffset, int yOffset, int width, int height)
     }
 
     SDL_UnlockSurface(m_screen);
+    drawStatusLine();
     SDL_Flip(m_screen);
+}
+
+template <typename T>
+void formatSI(std::ostringstream& result, T n, const char* units)
+{
+    result.precision(2);
+    result.setf(std::ios::fixed, std::ios::floatfield);
+
+    if (n >= 1000 * 1000 * 1000LL)
+        result << n / (1000.f * 1000 * 1000) << " G";
+    else if (n >= 1000 * 1000)
+        result << n / (1000.f * 1000) << " M";
+    else if (n >= 1000)
+        result << n / (1000.f) << " K";
+    else
+        result << n << " ";
+
+    result << units;
+}
+
+void Preview::drawStatusLine()
+{
+    int totalSamples = 0;
+    int maxPass = 0;
+    int totalPerSecond = 0;
+    int maxPerSecond = 0;
+    for (auto& thread: m_threadStatistics)
+    {
+        totalSamples += thread.second.samples;
+        totalPerSecond += thread.second.samplesPerSecond;
+        maxPerSecond = std::max(maxPerSecond, thread.second.samplesPerSecond);
+        maxPass = std::max(maxPass, thread.second.pass);
+    }
+    auto elapsed = std::chrono::monotonic_clock::now() - m_startTime;
+
+    std::ostringstream status;
+    status << std::chrono::duration_cast<std::chrono::minutes>(elapsed).count() << " min ";
+    status << std::chrono::duration_cast<std::chrono::seconds>(elapsed).count() % 60 << " s, ";
+    status << maxPass << " passes, ";
+    formatSI(status, totalSamples, "samples, ");
+    formatSI(status, totalPerSecond, "samples/s");
+
+    SDL_Color textColor = {0x0, 0x0, 0x0, 0x0};
+    uint32_t backgroundColor = SDL_MapRGB(m_screen->format, 0xaa, 0xaa, 0xaa);
+    SDL_Surface* statusText = TTF_RenderText_Blended(m_font, status.str().c_str(), textColor);
+
+    if (!statusText)
+        return;
+
+    SDL_Rect textRect = {
+        4, int16_t(m_screen->h - statusText->h), uint16_t(statusText->w), uint16_t(statusText->h)
+    };
+    SDL_Rect statusLineRect = {
+        0, int16_t(m_screen->h - statusLineHeight), uint16_t(m_screen->w), uint16_t(statusLineHeight)
+    };
+    SDL_FillRect(m_screen, &statusLineRect, backgroundColor);
+
+    if (maxPerSecond)
+    {
+        uint32_t barColor = SDL_MapRGB(m_screen->format, 0x66, 0x66, 0x66);
+        int n = 1;
+        int barWidth = 2;
+        int barHeight = 12;
+        int margin = 2;
+        int padding = 2;
+        for (auto& thread: m_threadStatistics)
+        {
+            float ratio = float(thread.second.samplesPerSecond) / maxPerSecond;
+            int h = barHeight * ratio;
+            SDL_Rect rect = {
+                int16_t(m_screen->w - margin - (barWidth + padding) * n), int16_t(m_screen->h - margin - h),
+                uint16_t(barWidth), uint16_t(h)
+            };
+            SDL_FillRect(m_screen, &rect, barColor);
+            n++;
+        }
+    }
+
+    SDL_BlitSurface(statusText, nullptr, m_screen, &textRect);
+    SDL_FreeSurface(statusText);
 }
 
 bool Preview::processEvents()
@@ -70,6 +193,10 @@ bool Preview::processEvents()
             case SDL_KEYDOWN:
                 if (event.key.keysym.sym == SDLK_ESCAPE)
                     return false;
+                else if (event.key.keysym.sym == SDLK_s && (event.key.keysym.mod & KMOD_LCTRL)) {
+                    std::cout << "Saving preview to preview.png" << std::endl;
+                    m_surface->save("preview.png");
+                }
                 break;
         }
     }

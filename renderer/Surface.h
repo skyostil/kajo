@@ -15,6 +15,7 @@ public:
 
     static glm::vec4 linearToSRGB(const glm::vec4& color);
     static uint32_t colorToRGBA8(const glm::vec4& color);
+    bool save(const std::string& fileName) const;
 
     int width;
     int height;

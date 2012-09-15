@@ -70,6 +70,26 @@ glm::vec4 Shader::shade(const Ray& ray, Random& random, bool indirectLightOnly, 
         return m_scene->backgroundColor;
 
     glm::vec4 color;
+
+    color = ray.material->emission;
+
+    if (depth >= m_depthLimit)
+        return color;
+
+    glm::vec3 dir = random.generateSpherical();
+    if (glm::dot(dir, ray.normal) <= 0)
+        dir = -dir;
+
+    Ray reflectedRay;
+    reflectedRay.direction = dir;
+    reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
+
+    if (m_raytracer->trace(reflectedRay))
+        color += ray.material->diffuse * shade(reflectedRay, random, false, depth + 1);
+
+    return color;
+
+#if 0
     bool exitingMaterial = (glm::dot(ray.direction, ray.normal) >= 0);
 
     //if (!indirectLightOnly)
@@ -179,5 +199,6 @@ glm::vec4 Shader::shade(const Ray& ray, Random& random, bool indirectLightOnly, 
     //color = glm::vec4(ray.tangent, 1.f);
     //color = glm::vec4(-ray.binormal, 1.f);
     return color;
+#endif
 #endif
 }

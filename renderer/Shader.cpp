@@ -15,12 +15,17 @@
 namespace
 {
 const float g_surfaceEpsilon = 0.001f;
+const float g_randomEpsilon = 1e-3f;
+//const float g_brdfWeight = 1;//.5f;
+//const float g_lightWeight = 1;//1.f - g_brdfWeight;
+const float g_brdfWeight = 1;
+const float g_lightWeight = 1;
 }
 
 Shader::Shader(scene::Scene* scene, Raytracer* raytracer):
     m_scene(scene),
     m_raytracer(raytracer),
-    m_depthLimit(10)
+    m_depthLimit(5)
 {
 }
 
@@ -78,13 +83,18 @@ glm::vec4 Shader::sampleObjects(const std::vector<ObjectType>& objects,
         size_t i = &object - &objects[0];
         glm::vec3 direction;
         glm::vec4 lightSample = sampleObject(object, transformDataList[i], ray, direction);
-        float lightProbability = pdfForObject(object, transformDataList[i], ray, direction);
         float brdfProbability = pdfForBRDF(ray, direction);
-        float totalLightProbability =
+        float lightProbability =
             pdfForObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
                           ray, direction);
-        float weight = lightProbability / (brdfProbability + totalLightProbability);
-        color += lightSample * weight / lightProbability;
+        float weight = 1.f / (g_brdfWeight * brdfProbability + g_lightWeight * lightProbability);
+        //printf("%f\n", weight);
+        //dump(lightSample);
+        //if (lightProbability < 0.0 || lightProbability > 1000)
+            //printf("%f\n", weight / lightProbability);
+        if (weight != std::numeric_limits<float>::infinity())
+            color += lightSample * weight;
+        //color += lightSample;
     });
     return color;
 }
@@ -118,19 +128,20 @@ glm::vec4 Shader::sampleObject(const scene::Sphere& sphere, const TransformData&
     glm::vec3 w = glm::normalize(lightPos - ray.hitPos);
     glm::vec3 v = glm::normalize(glm::cross(w, ray.normal));
     glm::vec3 u = glm::cross(w, v);
-    float d = sphere.radius * sphere.radius / glm::dot(dir, dir);
+    float r = sphere.radius - g_surfaceEpsilon; // Make sure we always hit the light.
+    float d = r * r / glm::dot(dir, dir);
     float cos_alpha = 1 - s1 + s1 * sqrtf(1 - d);
     float sin_alpha = sqrtf(1 - cos_alpha * cos_alpha);
     float phi = 2 * M_PI * s2;
 
-    direction = glm::vec3(cosf(phi) * sin_alpha, sin(phi) * sin_alpha, cos_alpha);
+    direction = glm::vec3(cosf(phi) * sin_alpha, sinf(phi) * sin_alpha, cos_alpha);
     direction = glm::vec3(
             glm::dot(glm::vec3(u.x, v.x, w.x), direction),
             glm::dot(glm::vec3(u.y, v.y, w.y), direction),
             glm::dot(glm::vec3(u.z, v.z, w.z), direction));
 
     Ray shadowRay(ray.random);
-    shadowRay.direction = glm::normalize(direction);
+    shadowRay.direction = direction;
     shadowRay.origin = ray.hitPos + shadowRay.direction * g_surfaceEpsilon;
     shadowRay.maxDistance = glm::length(dir) + sphere.radius; // Is this right?
 
@@ -140,59 +151,74 @@ glm::vec4 Shader::sampleObject(const scene::Sphere& sphere, const TransformData&
     if (shadowRay.objectId != reinterpret_cast<intptr_t>(&sphere))
         return glm::vec4();
 
-    return sphere.material.emission;
+    return ray.material->diffuse * sphere.material.emission * glm::dot(ray.normal, direction);
 }
 
 float Shader::pdfForObject(const scene::Sphere& sphere, const TransformData& data,
                            const Ray& ray, const glm::vec3& direction) const
 {
+    //return 1.f;
+
     glm::vec3 lightPos(sphere.transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 dir(glm::normalize(lightPos - ray.hitPos));
-    float cos_theta = glm::dot(dir, direction);
-    float d = sphere.radius * sphere.radius / glm::dot(dir, dir);
+    glm::vec3 dir(lightPos - ray.hitPos);
+    float d = (sphere.radius * sphere.radius) / glm::dot(dir, dir);
     float max_cos_theta = sqrtf(1 - d);
-    if (cos_theta > max_cos_theta)
-        return 0;
 
-    Ray lightRay(ray.random);
-    lightRay.direction = direction;
-    lightRay.origin = ray.hitPos + lightRay.direction * g_surfaceEpsilon;
-    m_raytracer->intersect(lightRay, sphere, data);
+    /*{
+        float cos_theta = glm::dot(dir, direction);
+        if (cos_theta > max_cos_theta)
+            return 0;
+    }*/
 
-    glm::vec3 x = ray.origin + ray.direction * ray.maxDistance;
-    float p = glm::dot(-direction, ray.normal) /
-        (2 * M_PI * glm::dot(x - ray.hitPos, x - ray.hitPos) * (1 - max_cos_theta));
+    Ray objectRay(ray.random);
+    objectRay.direction = direction;
+    objectRay.origin = ray.hitPos + objectRay.direction * g_surfaceEpsilon;
+    m_raytracer->intersect(objectRay, sphere, data);
+
+    if (!objectRay.hit())
+        return 0.f;
+
+    //printf("%f: %d\n", lightRay.maxDistance, lightRay.hit());
+
+    glm::vec3 pointOnObject = objectRay.origin + objectRay.direction * objectRay.maxDistance;
+    float cos_theta = glm::dot(-direction, objectRay.normal);
+    float p = cos_theta /
+        (2 * M_PI * glm::dot(pointOnObject - ray.hitPos, pointOnObject - ray.hitPos) * (1 - max_cos_theta));
+
+    //if (p <= 0.0 || p > 1000)
+    //    printf("%f\n", p);
+
     return p;
 }
 
 glm::vec4 Shader::sampleBRDF(const Ray& ray, glm::vec3& direction, int depth) const
 {
     direction = ray.random.generateSpherical();
-    if (glm::dot(direction, ray.normal) <= 0)
+    if (glm::dot(direction, ray.normal) < 0)
         direction = -direction;
 
     Ray brdfRay(ray.random);
     brdfRay.direction = direction;
     brdfRay.origin = ray.hitPos + brdfRay.direction * g_surfaceEpsilon;
-    return shade(brdfRay, depth + 1);
+    if (!m_raytracer->trace(brdfRay))
+        return m_scene->backgroundColor;
+    return ray.material->diffuse * shade(brdfRay, depth + 1) * glm::dot(ray.normal, direction);
 }
 
 float Shader::pdfForBRDF(const Ray& ray, const glm::vec3& direction) const
 {
-#if 1
     // Uniform BRDF over the hemisphere.
-    float hemisphereArea = 4 * M_PI / 2;
+    //float hemisphereArea = 4 * M_PI / 2;
     if (glm::dot(direction, ray.normal) <= 0)
-        return 0.f;
-    return 1.f / hemisphereArea;
-#else
-    // Uniform BRDF over the entire sphere.
-    return 1.f / (4 * M_PI);
-#endif
+        return 0;
+    // FIXME: Is this right?
+    return 0.5f;
+    //return 1.f / hemisphereArea;
 }
 
 glm::vec4 Shader::shade(const Ray& ray, int depth) const
 {
+    // TODO: Ray => SurfacePoint
     if (!ray.hit() || !ray.material)
         return m_scene->backgroundColor;
 
@@ -201,21 +227,29 @@ glm::vec4 Shader::shade(const Ray& ray, int depth) const
     if (depth >= m_depthLimit)
         return color;
 
+    /*
+    glm::vec3 direction = ray.normal;
+    color += glm::vec4(1.f) * fabs(pdfForObjects(m_scene->spheres,
+             m_raytracer->precalculatedScene().sphereTransforms, ray,
+             direction)) + glm::vec4(ray.normal.xyzx);*/
+
     // Sample BRDF
-    {
-        glm::vec3 direction;
-        glm::vec4 brdfSample = sampleBRDF(ray, direction, depth);
-        float brdfProbability = pdfForBRDF(ray, direction);
-        float lightProbability =
-            pdfForObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
-                          ray, direction);
-        float weight = brdfProbability / (brdfProbability + lightProbability);
-        color += brdfSample * weight / brdfProbability;
-    }
+    glm::vec3 direction;
+    glm::vec4 brdfSample = sampleBRDF(ray, direction, depth);
+    float brdfProbability = pdfForBRDF(ray, direction);
+    float lightProbability =
+        pdfForObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
+                      ray, direction);
+    float weight = 1.f / (g_brdfWeight * brdfProbability + g_lightWeight * lightProbability);
+    if (weight != std::numeric_limits<float>::infinity())
+        color += brdfSample * weight;
 
     // Sample lights
     color += sampleObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
                            ray);
+
+    // FIXME: Is this correct?
+    //color /= 2;
 
     return color;
 

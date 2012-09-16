@@ -48,7 +48,7 @@ void buildTestScene(scene::Scene& scene)
 
     Sphere sphere;
     sphere.radius = .3f;
-    sphere.material.emission = glm::vec4(1, 1, 1, 0) * 32.f;
+    sphere.material.emission = glm::vec4(1, 1, 1, 0);
     sphere.transform = glm::translate(sphere.transform, glm::vec3(0, -1.5, 2));
     scene.spheres.push_back(sphere);
 
@@ -101,7 +101,7 @@ void buildTestScene(scene::Scene& scene)
     //camera.transform = glm::lookAt(glm::vec3(-10, -2, 1), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
     scene.camera = camera;
 
-    scene.backgroundColor = glm::vec4(.2f, .2f, .2f, 1);
+    scene.backgroundColor = glm::vec4(.0f, .0f, .0f, 1);
 }
 
 int cpuCount()

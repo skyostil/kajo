@@ -1,10 +1,10 @@
 // Copyright (C) 2012 Sami Kyöstilä
 #include "Preview.h"
 #include "Surface.h"
+#include "Util.h"
 
 #include <cstring>
 #include <iostream>
-#include <sstream>
 #include <SDL/SDL.h>
 
 const int fontSize = 16;
@@ -103,28 +103,9 @@ void Preview::updateScreen(int xOffset, int yOffset, int width, int height)
     SDL_Flip(m_screen);
 }
 
-template <typename T>
-void formatSI(std::ostringstream& result, T n, const char* units)
-{
-    result.precision(2);
-    result.setf(std::ios::fixed, std::ios::floatfield);
-
-    if (n >= 1000 * 1000 * 1000LL)
-        result << n / (1000.f * 1000 * 1000) << " G";
-    else if (n >= 1000 * 1000)
-        result << n / (1000.f * 1000) << " M";
-    else if (n >= 1000)
-        result << n / (1000.f) << " K";
-    else
-        result << n << " ";
-
-    result << units;
-}
-
 void Preview::drawStatusLine()
 {
     int totalSamples = 0;
-    int maxPass = 0;
     int totalPerSecond = 0;
     int maxPerSecond = 0;
     for (auto& thread: m_threadStatistics)
@@ -132,15 +113,13 @@ void Preview::drawStatusLine()
         totalSamples += thread.second.samples;
         totalPerSecond += thread.second.samplesPerSecond;
         maxPerSecond = std::max(maxPerSecond, thread.second.samplesPerSecond);
-        maxPass = std::max(maxPass, thread.second.pass);
     }
     auto elapsed = std::chrono::monotonic_clock::now() - m_startTime;
 
     std::ostringstream status;
     status << std::chrono::duration_cast<std::chrono::minutes>(elapsed).count() << " min ";
     status << std::chrono::duration_cast<std::chrono::seconds>(elapsed).count() % 60 << " s, ";
-    status << maxPass << " passes, ";
-    formatSI(status, totalSamples, "samples, ");
+    formatSI(status, totalSamples / float(m_surface->width * m_surface->height), "samples/pixel, ");
     formatSI(status, totalPerSecond, "samples/s");
 
     SDL_Color textColor = {0x0, 0x0, 0x0, 0x0};

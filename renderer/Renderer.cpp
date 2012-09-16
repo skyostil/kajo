@@ -14,7 +14,7 @@ Renderer::Renderer(scene::Scene* scene):
     m_scene(scene),
     m_raytracer(new Raytracer(scene)),
     m_shader(new Shader(scene, m_raytracer.get())),
-    m_samples(1)
+    m_samples(32)
 {
 }
 
@@ -29,7 +29,7 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
     glm::vec3 p3 = glm::unProject(glm::vec3(0.f, 1.f, 0.f), camera.transform, camera.projection, viewport);
     glm::vec3 origin(glm::inverse(camera.transform) * glm::vec4(0.f, 0.f, 0.f, 1.f));
 
-    std::unique_ptr<glm::vec4[]> samples(new glm::vec4[width * height]);
+    std::unique_ptr<glm::vec4[]> radianceMap(new glm::vec4[width * height]);
 
     float pixelWidth = 1.f / surface.width;
     float pixelHeight = 1.f / surface.height;
@@ -54,13 +54,13 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                     ray.direction = direction;
 
                     m_raytracer->trace(ray);
-                    radiance += m_shader->shade(ray) * (1.f / m_samples);
+                    radiance += m_shader->shade(ray);
                 }
                 // Combine new sample with the previous passes.
-                glm::vec4& avgSample = samples[(y - yOffset) * width + (x - xOffset)];
-                avgSample += (radiance - avgSample) * (1.f / pass);
+                glm::vec4& totalRadiance = radianceMap[(y - yOffset) * width + (x - xOffset)];
+                totalRadiance += radiance / m_samples;
 
-                glm::vec4 pixel = Surface::linearToSRGB(glm::clamp(avgSample, glm::vec4(0), glm::vec4(1)));
+                glm::vec4 pixel = Surface::linearToSRGB(glm::clamp(totalRadiance / pass, glm::vec4(0), glm::vec4(1)));
                 pixel.a = 1;
                 surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(pixel);
             }

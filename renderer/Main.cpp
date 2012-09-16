@@ -113,6 +113,7 @@ struct RenderUpdate
 {
     std::thread::id threadId;
     int pass;
+    int samples;
     int xOffset, yOffset, width, height;
 };
 
@@ -146,9 +147,9 @@ void render(Surface& surface, scene::Scene& scene)
     bool done = false;
 
     Queue<RenderUpdate> updateQueue;
-    renderer.setObserver([&updateQueue, &done] (int pass, int xOffset, int yOffset, int width, int height) {
+    renderer.setObserver([&updateQueue, &done] (int pass, int samples, int xOffset, int yOffset, int width, int height) {
         std::thread::id threadId = std::this_thread::get_id();
-        updateQueue.push(RenderUpdate{threadId, pass, xOffset, yOffset, width, height});
+        updateQueue.push(RenderUpdate{threadId, pass, samples, xOffset, yOffset, width, height});
         return !done;
     });
 
@@ -159,7 +160,7 @@ void render(Surface& surface, scene::Scene& scene)
     {
         RenderUpdate update;
         if (updateQueue.pop(update, std::chrono::milliseconds(500)))
-            preview->update(update.threadId, update.pass,
+            preview->update(update.threadId, update.pass, update.samples,
                             update.xOffset, update.yOffset,
                             update.width, update.height);
     }

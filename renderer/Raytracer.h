@@ -29,14 +29,14 @@ public:
     bool trace(Ray& ray) const;
     const PrecalculatedScene& precalculatedScene() const;
 
+    void intersect(Ray& ray, const scene::Sphere& sphere, const TransformData& data) const;
+    void intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const;
+
 private:
     template <typename ObjectType>
     void intersectAll(const std::vector<ObjectType>& objects,
                       const TransformDataList& transformDataList,
                       Ray& ray) const;
-
-    void intersect(Ray& ray, const scene::Sphere& sphere, const TransformData& data) const;
-    void intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const;
 
     void processIntersection(Ray& ray, float t, intptr_t objectId,
                              const glm::vec3& normal, const glm::vec3& tangent,

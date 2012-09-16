@@ -54,10 +54,10 @@ Preview::~Preview()
     SDL_Quit();
 }
 
-void Preview::update(std::thread::id threadId, int pass, int xOffset, int yOffset, int width, int height)
+void Preview::update(std::thread::id threadId, int pass, int samples, int xOffset, int yOffset, int width, int height)
 {
     ThreadStatistics& stats = m_threadStatistics[threadId];
-    stats.samples += width * height;
+    stats.samples += samples * width * height;
     stats.pass = pass;
 
     auto now = std::chrono::monotonic_clock::now();

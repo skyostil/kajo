@@ -5,7 +5,8 @@
 
 #include <limits>
 
-Ray::Ray():
+Ray::Ray(Random& random):
+    random(random),
     objectId(0),
     minDistance(0),
     maxDistance(std::numeric_limits<float>::infinity()),

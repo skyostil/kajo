@@ -18,7 +18,7 @@ public:
     static std::unique_ptr<Preview> create(Surface* surface);
 
     bool processEvents();
-    void update(std::thread::id threadId, int pass, int xOffset, int yOffset, int width, int height);
+    void update(std::thread::id threadId, int pass, int samples, int xOffset, int yOffset, int width, int height);
 
 private:
     Preview(Surface* surface);

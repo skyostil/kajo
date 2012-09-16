@@ -10,11 +10,14 @@ namespace scene
     class Material;
 }
 
+class Random;
+
 class Ray
 {
 public:
-    Ray();
+    Ray(Random& random);
 
+    Random& random;
     glm::vec3 origin;
     glm::vec3 direction;
 

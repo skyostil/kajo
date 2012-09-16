@@ -49,12 +49,12 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                     glm::vec3 direction = p1 + (p2 - p1) * sx + (p3 - p1) * sy - origin;
                     direction = glm::normalize(direction);
 
-                    Ray ray;
+                    Ray ray(random);
                     ray.origin = origin;
                     ray.direction = direction;
 
                     m_raytracer->trace(ray);
-                    radiance += m_shader->shade(ray, random) * (1.f / m_samples);
+                    radiance += m_shader->shade(ray) * (1.f / m_samples);
                 }
                 // Combine new sample with the previous passes.
                 glm::vec4& avgSample = samples[(y - yOffset) * width + (x - xOffset)];
@@ -64,7 +64,7 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                 pixel.a = 1;
                 surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(pixel);
             }
-            if (m_observer && !m_observer(pass, 0, y, width, 1))
+            if (m_observer && !m_observer(pass, m_samples, 0, y, width, 1))
                 return;
         }
     }

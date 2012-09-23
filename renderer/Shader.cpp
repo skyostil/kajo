@@ -202,7 +202,7 @@ glm::vec4 Shader::sampleBRDF(const Ray& ray, glm::vec3& direction, int depth) co
     brdfRay.origin = ray.hitPos + brdfRay.direction * g_surfaceEpsilon;
     if (!m_raytracer->trace(brdfRay))
         return m_scene->backgroundColor;
-    return ray.material->diffuse * shade(brdfRay, depth + 1) * glm::dot(ray.normal, direction);
+    return ray.material->diffuse * shade(brdfRay, depth + 1, SampleNonEmissiveObjects) * glm::dot(ray.normal, direction);
 }
 
 float Shader::pdfForBRDF(const Ray& ray, const glm::vec3& direction) const
@@ -226,13 +226,18 @@ static float russianRoulette(Random& random, const glm::vec4& probability)
     return 0;
 }
 
-glm::vec4 Shader::shade(const Ray& ray, int depth) const
+glm::vec4 Shader::shade(const Ray& ray, int depth, ObjectSamplingScheme objectSamplingScheme) const
 {
     // TODO: Ray => SurfacePoint
     if (!ray.hit() || !ray.material)
         return m_scene->backgroundColor;
 
     glm::vec4 color = ray.material->emission;
+
+    // If we are only sampling indirect lighting, skip emissive objects. This
+    // is done to avoid oversampling emissive objects.
+    if (objectSamplingScheme == SampleNonEmissiveObjects && (color.x || color.y || color.z))
+        return glm::vec4();
 
     // Terminate path with Russian roulette
     float survivalProbability = russianRoulette(ray.random, ray.material->diffuse);

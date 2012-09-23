@@ -26,7 +26,13 @@ class Shader
 public:
     Shader(scene::Scene* scene, Raytracer* raytracer);
 
-    glm::vec4 shade(const Ray& ray, int depth = 0) const;
+    enum ObjectSamplingScheme
+    {
+        SampleNonEmissiveObjects,
+        SampleAllObjects,
+    };
+
+    glm::vec4 shade(const Ray& ray, int depth = 0, ObjectSamplingScheme = SampleAllObjects) const;
 
 private:
     template <typename ObjectType>

@@ -28,13 +28,21 @@ uint32_t Surface::colorToRGBA8(const glm::vec4& color)
 
 bool Surface::save(const std::string& fileName) const
 {
+    std::unique_ptr<uint32_t[]> bgraPixels(new uint32_t[width * height]);
+
+    // Temporarily swap the channel ordering
+    for (int i = 0; i < width * height; i++)
+        bgraPixels[i] =
+            (pixels[i] & 0xff00ff00) |
+            ((pixels[i] & 0x00ff0000) >> 16) |
+            ((pixels[i] & 0x000000ff) << 16);
+
     unsigned error =
         lodepng::encode(fileName,
-                        reinterpret_cast<const unsigned char*>(&pixels[0]),
+                        reinterpret_cast<const unsigned char*>(&bgraPixels[0]),
                         width, height);
+
     if (error)
-    {
         std::cerr << "PNG encode failure: " << lodepng_error_text(error) << std::endl;
-    }
     return !error;
 }

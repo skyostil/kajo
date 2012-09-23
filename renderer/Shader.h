@@ -55,8 +55,6 @@ private:
 
     scene::Scene* m_scene;
     Raytracer* m_raytracer;
-
-    int m_depthLimit;
 };
 
 #endif

@@ -20,12 +20,12 @@ const float g_randomEpsilon = 1e-3f;
 //const float g_lightWeight = 1;//1.f - g_brdfWeight;
 const float g_brdfWeight = 1;
 const float g_lightWeight = 1;
+const int g_depthLimit = 8;
 }
 
 Shader::Shader(scene::Scene* scene, Raytracer* raytracer):
     m_scene(scene),
-    m_raytracer(raytracer),
-    m_depthLimit(5)
+    m_raytracer(raytracer)
 {
 }
 
@@ -216,6 +216,16 @@ float Shader::pdfForBRDF(const Ray& ray, const glm::vec3& direction) const
     //return 1.f / hemisphereArea;
 }
 
+static float russianRoulette(Random& random, const glm::vec4& probability)
+{
+    // Note: w component ignored
+    float p = std::max(probability.x, std::max(probability.y, probability.z));
+    float r = random.generate().x * .5f + .5f;
+    if (p > 0 && r <= p)
+        return 1.f / p;
+    return 0;
+}
+
 glm::vec4 Shader::shade(const Ray& ray, int depth) const
 {
     // TODO: Ray => SurfacePoint
@@ -224,7 +234,9 @@ glm::vec4 Shader::shade(const Ray& ray, int depth) const
 
     glm::vec4 color = ray.material->emission;
 
-    if (depth >= m_depthLimit)
+    // Terminate path with Russian roulette
+    float survivalProbability = russianRoulette(ray.random, ray.material->diffuse);
+    if (!survivalProbability || depth >= g_depthLimit)
         return color;
 
     /*
@@ -242,11 +254,11 @@ glm::vec4 Shader::shade(const Ray& ray, int depth) const
                       ray, direction);
     float weight = 1.f / (g_brdfWeight * brdfProbability + g_lightWeight * lightProbability);
     if (weight != std::numeric_limits<float>::infinity())
-        color += brdfSample * weight;
+        color += survivalProbability * brdfSample * weight;
 
     // Sample lights
-    color += sampleObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
-                           ray);
+    color += survivalProbability *
+        sampleObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms, ray);
 
     // FIXME: Is this correct?
     //color /= 2;

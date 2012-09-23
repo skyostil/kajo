@@ -30,7 +30,7 @@ bool Surface::save(const std::string& fileName) const
 {
     std::unique_ptr<uint32_t[]> bgraPixels(new uint32_t[width * height]);
 
-    // Temporarily swap the channel ordering
+    // Fix the channel ordering for PNG
     for (int i = 0; i < width * height; i++)
         bgraPixels[i] =
             (pixels[i] & 0xff00ff00) |

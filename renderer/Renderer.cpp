@@ -31,8 +31,11 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
 
     std::unique_ptr<glm::vec4[]> radianceMap(new glm::vec4[width * height]);
 
+    int samplesPerAxis = sqrt(m_samples);
     float pixelWidth = 1.f / surface.width;
     float pixelHeight = 1.f / surface.height;
+    float sampleWidth = pixelWidth / samplesPerAxis;
+    float sampleHeight = pixelHeight / samplesPerAxis;
 
     for (int pass = 1;; pass++)
     {
@@ -41,20 +44,23 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
             for (int x = xOffset; x < xOffset + width; x++)
             {
                 glm::vec4 radiance;
-                for (unsigned s = 0; s < m_samples; s++)
+                for (int sampleY = 0; sampleY < samplesPerAxis; sampleY++)
                 {
-                    glm::vec4 offset = random.generate();
-                    float sx = x * pixelWidth + pixelWidth * offset.x;
-                    float sy = (surface.height - y) * pixelHeight + pixelHeight * offset.y;
-                    glm::vec3 direction = p1 + (p2 - p1) * sx + (p3 - p1) * sy - origin;
-                    direction = glm::normalize(direction);
+                    for (int sampleX = 0; sampleX < samplesPerAxis; sampleX++)
+                    {
+                        glm::vec4 offset = random.generate() * .5f + glm::vec4(.5f);
+                        float sx = x * pixelWidth + sampleX * sampleWidth + offset.x * sampleWidth;
+                        float sy = (surface.height - y) * pixelHeight + sampleY * sampleHeight + offset.y * sampleHeight;
+                        glm::vec3 direction = p1 + (p2 - p1) * sx + (p3 - p1) * sy - origin;
+                        direction = glm::normalize(direction);
 
-                    Ray ray(random);
-                    ray.origin = origin;
-                    ray.direction = direction;
+                        Ray ray(random);
+                        ray.origin = origin;
+                        ray.direction = direction;
 
-                    m_raytracer->trace(ray);
-                    radiance += m_shader->shade(ray);
+                        m_raytracer->trace(ray);
+                        radiance += m_shader->shade(ray);
+                    }
                 }
                 // Combine new sample with the previous passes.
                 glm::vec4& totalRadiance = radianceMap[(y - yOffset) * width + (x - xOffset)];

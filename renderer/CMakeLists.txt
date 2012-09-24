@@ -4,6 +4,8 @@ find_package(SDL_ttf)
 
 add_executable(
     renderer
+    Image.cpp
+    Image.h
     Main.cpp
     PrecalculatedScene.cpp
     PrecalculatedScene.h
@@ -19,8 +21,6 @@ add_executable(
     Renderer.h
     Shader.cpp
     Shader.h
-    Surface.cpp
-    Surface.h
     SurfacePoint.cpp
     SurfacePoint.h
     Util.cpp

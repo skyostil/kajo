@@ -8,24 +8,24 @@
 #include <thread>
 #include <SDL/SDL_ttf.h>
 
-class Surface;
+class Image;
 class SDL_Surface;
 
 class Preview
 {
 public:
     ~Preview();
-    static std::unique_ptr<Preview> create(Surface* surface);
+    static std::unique_ptr<Preview> create(Image* image);
 
     bool processEvents();
     void update(std::thread::id threadId, int pass, int samples, int xOffset, int yOffset, int width, int height);
 
 private:
-    Preview(Surface* surface);
+    Preview(Image* image);
     void updateScreen(int xOffset, int yOffset, int width, int height);
     void drawStatusLine();
 
-    Surface* m_surface;
+    Image* m_image;
     SDL_Surface* m_screen;
     TTF_Font* m_font;
 

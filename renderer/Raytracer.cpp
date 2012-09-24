@@ -1,8 +1,8 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
+#include "scene/Scene.h"
 #include "Raytracer.h"
 #include "Ray.h"
-#include "Surface.h"
 #include "SurfacePoint.h"
 #include "Util.h"
 

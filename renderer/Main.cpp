@@ -1,10 +1,10 @@
 // Copyright (C) 2012 Sami Kyöstilä
+#include "Image.h"
 #include "Preview.h"
 #include "Queue.h"
 #include "Raytracer.h"
 #include "Renderer.h"
 #include "Shader.h"
-#include "Surface.h"
 #include "scene/Scene.h"
 
 #include <iostream>
@@ -119,13 +119,13 @@ struct RenderUpdate
 
 typedef std::vector<std::future<void>> RenderTasks;
 
-void createTasks(Surface& surface, Renderer& renderer, RenderTasks& tasks)
+void createTasks(Image& image, Renderer& renderer, RenderTasks& tasks)
 {
-    int slice = (surface.height + 1) / cpuCount();
-    for (int y = 0; y < surface.height; y += slice)
+    int slice = (image.height + 1) / cpuCount();
+    for (int y = 0; y < image.height; y += slice)
     {
-        auto task = std::async(std::launch::async, [=, &renderer, &surface] {
-            renderer.render(surface, 0, y, surface.width, slice);
+        auto task = std::async(std::launch::async, [=, &renderer, &image] {
+            renderer.render(image, 0, y, image.width, slice);
         });
         tasks.push_back(std::move(task));
     }
@@ -140,10 +140,10 @@ void joinTasks(RenderTasks& tasks)
     }
 }
 
-void render(Surface& surface, scene::Scene& scene)
+void render(Image& image, scene::Scene& scene)
 {
     Renderer renderer(&scene);
-    std::unique_ptr<Preview> preview(Preview::create(&surface));
+    std::unique_ptr<Preview> preview(Preview::create(&image));
     bool done = false;
 
     Queue<RenderUpdate> updateQueue;
@@ -154,7 +154,7 @@ void render(Surface& surface, scene::Scene& scene)
     });
 
     RenderTasks tasks;
-    createTasks(surface, renderer, tasks);
+    createTasks(image, renderer, tasks);
 
     while (preview->processEvents())
     {
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
 
     buildTestScene(scene);
 
-    Surface surface(640, 480);
-    render(surface, scene);
-    surface.save("out.png");
+    Image image(640, 480);
+    render(image, scene);
+    image.save("out.png");
 }

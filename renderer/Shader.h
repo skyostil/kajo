@@ -11,7 +11,6 @@
 
 class Random;
 class Raytracer;
-class Surface;
 class SurfacePoint;
 
 namespace scene

@@ -1,11 +1,11 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
+#include "Image.h"
 #include "Renderer.h"
 #include "Random.h"
 #include "Ray.h"
 #include "Raytracer.h"
 #include "Shader.h"
-#include "Surface.h"
 #include "SurfacePoint.h"
 #include "scene/Scene.h"
 
@@ -19,7 +19,7 @@ Renderer::Renderer(scene::Scene* scene):
 {
 }
 
-void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int height) const
+void Renderer::render(Image& image, int xOffset, int yOffset, int width, int height) const
 {
     Random random(0715517 * (yOffset + 1));
     const scene::Camera& camera = m_scene->camera;
@@ -33,8 +33,8 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
     std::unique_ptr<glm::vec4[]> radianceMap(new glm::vec4[width * height]);
 
     int samplesPerAxis = sqrt(m_samples);
-    float pixelWidth = 1.f / surface.width;
-    float pixelHeight = 1.f / surface.height;
+    float pixelWidth = 1.f / image.width;
+    float pixelHeight = 1.f / image.height;
     float sampleWidth = pixelWidth / samplesPerAxis;
     float sampleHeight = pixelHeight / samplesPerAxis;
 
@@ -51,7 +51,7 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                     {
                         glm::vec4 offset = random.generate() * .5f + glm::vec4(.5f);
                         float sx = x * pixelWidth + sampleX * sampleWidth + offset.x * sampleWidth;
-                        float sy = (surface.height - y) * pixelHeight + sampleY * sampleHeight + offset.y * sampleHeight;
+                        float sy = (image.height - y) * pixelHeight + sampleY * sampleHeight + offset.y * sampleHeight;
                         glm::vec3 direction = p1 + (p2 - p1) * sx + (p3 - p1) * sy - origin;
                         direction = glm::normalize(direction);
 
@@ -67,9 +67,9 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                 glm::vec4& totalRadiance = radianceMap[(y - yOffset) * width + (x - xOffset)];
                 totalRadiance += radiance / m_samples;
 
-                glm::vec4 pixel = Surface::linearToSRGB(glm::clamp(totalRadiance / pass, glm::vec4(0), glm::vec4(1)));
+                glm::vec4 pixel = Image::linearToSRGB(glm::clamp(totalRadiance / pass, glm::vec4(0), glm::vec4(1)));
                 pixel.a = 1;
-                surface.pixels[y * surface.width + x] = Surface::colorToRGBA8(pixel);
+                image.pixels[y * image.width + x] = Image::colorToRGBA8(pixel);
             }
             if (m_observer && !m_observer(pass, m_samples, 0, y, width, 1))
                 return;

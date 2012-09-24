@@ -1,17 +1,15 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef SURFACE_H
-#define SURFACE_H
-
-#include "scene/Scene.h"
+#ifndef IMAGE_H
+#define IMAGE_H
 
 #include <memory>
 #include <stdint.h>
 #include <glm/glm.hpp>
 
-class Surface
+class Image
 {
 public:
-    Surface(int width, int height);
+    Image(int width, int height);
 
     static glm::vec4 linearToSRGB(const glm::vec4& color);
     static uint32_t colorToRGBA8(const glm::vec4& color);

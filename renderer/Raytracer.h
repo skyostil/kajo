@@ -10,7 +10,6 @@
 
 class Ray;
 class Shader;
-class Surface;
 class SurfacePoint;
 
 namespace scene

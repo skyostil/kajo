@@ -4,9 +4,9 @@
 
 #include <memory>
 
+class Image;
 class Raytracer;
 class Shader;
-class Surface;
 
 namespace scene
 {
@@ -21,7 +21,7 @@ public:
     Renderer(scene::Scene* scene);
 
     void setObserver(RenderObserver observer);
-    void render(Surface& surface, int xOffset, int yOffset, int width, int height) const;
+    void render(Image& image, int xOffset, int yOffset, int width, int height) const;
 
 private:
     scene::Scene* m_scene;

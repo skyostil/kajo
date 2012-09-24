@@ -1,6 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
 #include "Preview.h"
-#include "Surface.h"
+#include "Image.h"
 #include "Util.h"
 
 #include <cstring>
@@ -10,7 +10,7 @@
 const int fontSize = 16;
 const int statusLineHeight = fontSize + 5;
 
-std::unique_ptr<Preview> Preview::create(Surface* surface)
+std::unique_ptr<Preview> Preview::create(Image* image)
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
         return nullptr;
@@ -19,7 +19,7 @@ std::unique_ptr<Preview> Preview::create(Surface* surface)
         std::cerr << "SDL_ttf: " << TTF_GetError() << std::endl;
         return nullptr;
     }
-    std::unique_ptr<Preview> preview(new Preview(surface));
+    std::unique_ptr<Preview> preview(new Preview(image));
 
     preview->m_font = TTF_OpenFont("../data/SourceSansPro-Regular.ttf", fontSize);
     if (!preview->m_font) {
@@ -27,18 +27,18 @@ std::unique_ptr<Preview> Preview::create(Surface* surface)
         return nullptr;
     }
 
-    preview->m_screen = SDL_SetVideoMode(surface->width, surface->height + statusLineHeight, 32,
+    preview->m_screen = SDL_SetVideoMode(image->width, image->height + statusLineHeight, 32,
                                          SDL_SWSURFACE);
     if (!preview->m_screen)
         return nullptr;
     SDL_WM_SetCaption("Rayno", "Rayno");
 
-    preview->updateScreen(0, 0, surface->width, surface->height);
+    preview->updateScreen(0, 0, image->width, image->height);
     return preview;
 }
 
-Preview::Preview(Surface* surface):
-    m_surface(surface),
+Preview::Preview(Image* image):
+    m_image(image),
     m_font(0),
     m_startTime(std::chrono::monotonic_clock::now())
 {
@@ -71,7 +71,7 @@ void Preview::update(std::thread::id threadId, int pass, int samples, int xOffse
     if (now - m_lastUpdate > std::chrono::milliseconds(100))
     {
         m_lastUpdate = now;
-        updateScreen(0, 0, m_surface->width, m_surface->height);
+        updateScreen(0, 0, m_image->width, m_image->height);
     }
 }
 
@@ -83,9 +83,9 @@ void Preview::updateScreen(int xOffset, int yOffset, int width, int height)
     assert(xOffset + width <= m_screen->w);
     assert(yOffset + height <= m_screen->h);
 
-    auto* src = &m_surface->pixels[0];
+    auto* src = &m_image->pixels[0];
     auto* dest = reinterpret_cast<uint32_t*>(m_screen->pixels);
-    size_t srcStride = m_surface->width;
+    size_t srcStride = m_image->width;
     size_t destStride = m_screen->pitch / sizeof(*dest);
 
     src += yOffset * srcStride + xOffset;
@@ -119,7 +119,7 @@ void Preview::drawStatusLine()
     std::ostringstream status;
     status << std::chrono::duration_cast<std::chrono::minutes>(elapsed).count() << " min ";
     status << std::chrono::duration_cast<std::chrono::seconds>(elapsed).count() % 60 << " s, ";
-    formatSI(status, totalSamples / float(m_surface->width * m_surface->height), "samples/pixel, ");
+    formatSI(status, totalSamples / float(m_image->width * m_image->height), "samples/pixel, ");
     formatSI(status, totalPerSecond, "samples/s");
 
     SDL_Color textColor = {0x0, 0x0, 0x0, 0x0};
@@ -174,7 +174,7 @@ bool Preview::processEvents()
                     return false;
                 else if (event.key.keysym.sym == SDLK_s && (event.key.keysym.mod & KMOD_LCTRL)) {
                     std::cout << "Saving preview to preview.png" << std::endl;
-                    m_surface->save("preview.png");
+                    m_image->save("preview.png");
                 }
                 break;
         }

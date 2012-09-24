@@ -1,22 +1,22 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
-#include "Surface.h"
+#include "Image.h"
 #include <iostream>
 #include <lodepng.h>
 
-Surface::Surface(int width, int height):
+Image::Image(int width, int height):
     width(width),
     height(height),
     pixels(new uint32_t[width * height])
 {
 }
 
-glm::vec4 Surface::linearToSRGB(const glm::vec4& color)
+glm::vec4 Image::linearToSRGB(const glm::vec4& color)
 {
     return glm::pow(color, glm::vec4(1 / 2.2f));
 }
 
-uint32_t Surface::colorToRGBA8(const glm::vec4& color)
+uint32_t Image::colorToRGBA8(const glm::vec4& color)
 {
     int r = static_cast<int>(color.r * 255.f + .5f);
     int g = static_cast<int>(color.g * 255.f + .5f);
@@ -26,7 +26,7 @@ uint32_t Surface::colorToRGBA8(const glm::vec4& color)
     return pixel;
 }
 
-bool Surface::save(const std::string& fileName) const
+bool Image::save(const std::string& fileName) const
 {
     std::unique_ptr<uint32_t[]> bgraPixels(new uint32_t[width * height]);
 

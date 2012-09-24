@@ -21,6 +21,8 @@ add_executable(
     Shader.h
     Surface.cpp
     Surface.h
+    SurfacePoint.cpp
+    SurfacePoint.h
     Util.cpp
     Util.h
 )

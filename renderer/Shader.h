@@ -3,14 +3,16 @@
 #define SHADER_H
 
 #include "PrecalculatedScene.h"
+#include "Ray.h"
 
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
 
-class Ray;
+class Random;
 class Raytracer;
 class Surface;
+class SurfacePoint;
 
 namespace scene
 {
@@ -26,38 +28,46 @@ class Shader
 public:
     Shader(scene::Scene* scene, Raytracer* raytracer);
 
-    enum ObjectSamplingScheme
+    enum LightSamplingScheme
     {
         SampleNonEmissiveObjects,
         SampleAllObjects,
     };
 
-    glm::vec4 shade(const Ray& ray, int depth = 0, ObjectSamplingScheme = SampleAllObjects) const;
+    glm::vec4 shade(const SurfacePoint& surfacePoint, Random& random, int depth = 0, LightSamplingScheme = SampleAllObjects) const;
 
 private:
-    template <typename ObjectType>
-    void applyAllEmissiveObjects(const std::vector<ObjectType>& lights,
-                                 const TransformDataList& transformDataList,
-                                 const Ray& ray, glm::vec4& color) const;
+    class Sample
+    {
+    public:
+        Sample(Random& random):
+            random(random)
+        {
+        }
 
-    void applyEmissiveObject(const scene::Sphere& sphere, const TransformData& data,
-                             const Ray& ray, glm::vec4& color) const;
+        Random& random;
+        Ray ray;
+        glm::vec4 value;
+    };
 
-    glm::vec4 sampleBRDF(const Ray& ray, glm::vec3& direction, int depth) const;
-    template <typename ObjectType>
-    glm::vec4 sampleObjects(const std::vector<ObjectType>& lights,
-                            const TransformDataList& transformDataList,
-                            const Ray& ray) const;
-    glm::vec4 sampleObject(const scene::Sphere& sphere, const TransformData& data,
-                           const Ray& ray, glm::vec3& direction) const;
+    glm::vec4 sampleBSDF(const SurfacePoint&, Random&, int depth) const;
+    void generateBSDFSample(Sample&, const SurfacePoint&, int depth) const;
+    float calculateBSDFProbability(const SurfacePoint&, const glm::vec3& direction) const;
 
-    float pdfForBRDF(const Ray& ray, const glm::vec3& direction) const;
     template <typename ObjectType>
-    float pdfForObjects(const std::vector<ObjectType>& lights,
-                        const TransformDataList& transformDataList,
-                        const Ray& ray, const glm::vec3& direction) const;
-    float pdfForObject(const scene::Sphere& sphere, const TransformData& data,
-                       const Ray& ray, const glm::vec3& direction) const;
+    glm::vec4 sampleLights(const std::vector<ObjectType>& lights,
+                           const TransformDataList& transformDataList,
+                           const SurfacePoint&, Random&) const;
+    void generateLightSample(Sample&, const scene::Sphere& sphere, const TransformData& data,
+                             const SurfacePoint&) const;
+
+
+    template <typename ObjectType>
+    float calculateLightProbabilities(const std::vector<ObjectType>& lights,
+                                      const TransformDataList& transformDataList,
+                                      const SurfacePoint&, const glm::vec3& direction) const;
+    float calculateLightProbability(const scene::Sphere& sphere, const TransformData& data,
+                                    const SurfacePoint&, const glm::vec3& direction) const;
 
     scene::Scene* m_scene;
     Raytracer* m_raytracer;

@@ -3,6 +3,7 @@
 #include "Raytracer.h"
 #include "Ray.h"
 #include "Surface.h"
+#include "SurfacePoint.h"
 #include "Util.h"
 
 #include <algorithm>
@@ -21,7 +22,7 @@ const PrecalculatedScene& Raytracer::precalculatedScene() const
     return *m_precalcScene.get();
 }
 
-void Raytracer::intersect(Ray& ray, const scene::Sphere& sphere, const TransformData& data) const
+void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Sphere& sphere, const TransformData& data) const
 {
     // From http://wiki.cgsociety.org/index.php/Ray_Sphere_Intersection
     glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
@@ -69,11 +70,11 @@ void Raytracer::intersect(Ray& ray, const scene::Sphere& sphere, const Transform
     glm::vec3 tangent = glm::cross(normal, glm::vec3(0.f, 1.f, 0.f));
     glm::vec3 binormal = glm::cross(normal, tangent);
 
-    processIntersection(ray, t0 * data.determinant, objectId, normal,
+    processIntersection(ray, surfacePoint, t0 * data.determinant, objectId, normal,
                         tangent, binormal, &sphere.material);
 }
 
-void Raytracer::intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const
+void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Plane& plane, const TransformData& data) const
 {
     glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
     glm::vec3 origin = ((data.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
@@ -95,23 +96,23 @@ void Raytracer::intersect(Ray& ray, const scene::Plane& plane, const TransformDa
 
     intptr_t objectId = reinterpret_cast<intptr_t>(&plane);
 
-    processIntersection(ray, t * data.determinant, objectId, normal,
+    processIntersection(ray, surfacePoint, t * data.determinant, objectId, normal,
                         tangent, binormal, &plane.material);
 }
 
 template <typename ObjectType>
 void Raytracer::intersectAll(const std::vector<ObjectType>& objects,
                             const TransformDataList& transformDataList,
-                            Ray& ray) const
+                            Ray& ray, SurfacePoint& surfacePoint) const
 {
     std::for_each(objects.begin(), objects.end(), [&](const ObjectType& object){
         size_t i = &object - &objects[0];
-        intersect(ray, object, transformDataList[i]);
+        intersect(ray, surfacePoint, object, transformDataList[i]);
     });
 }
 
-void Raytracer::processIntersection(Ray& ray, float t,
-                                    intptr_t objectId,
+void Raytracer::processIntersection(Ray& ray, SurfacePoint& surfacePoint,
+                                    float t, intptr_t objectId,
                                     const glm::vec3& normal,
                                     const glm::vec3& tangent,
                                     const glm::vec3& binormal,
@@ -119,23 +120,29 @@ void Raytracer::processIntersection(Ray& ray, float t,
 {
     if (t > ray.maxDistance || t < ray.minDistance)
         return;
-
-    ray.objectId = objectId;
     ray.maxDistance = t;
-    ray.normal = normal;
-    ray.tangent = tangent;
-    ray.binormal = binormal;
-    ray.material = material;
+
+    surfacePoint.objectId = objectId;
+    surfacePoint.normal = normal;
+    surfacePoint.tangent = tangent;
+    surfacePoint.binormal = binormal;
+    surfacePoint.material = material;
 }
 
-bool Raytracer::trace(Ray& ray) const
+SurfacePoint Raytracer::trace(Ray& ray) const
 {
-    intersectAll(m_scene->planes, m_precalcScene->planeTransforms, ray);
-    intersectAll(m_scene->spheres, m_precalcScene->sphereTransforms, ray);
+    SurfacePoint surfacePoint;
+    intersectAll(m_scene->planes, m_precalcScene->planeTransforms, ray, surfacePoint);
+    intersectAll(m_scene->spheres, m_precalcScene->sphereTransforms, ray, surfacePoint);
 
-    if (!ray.hit())
-        return false;
+    if (surfacePoint.valid())
+        surfacePoint.position = ray.origin + ray.direction * ray.maxDistance;
 
-    ray.hitPos = ray.origin + ray.direction * ray.maxDistance;
-    return true;
+    return surfacePoint;
+}
+
+bool Raytracer::canReach(Ray& ray, intptr_t objectId) const
+{
+    SurfacePoint result = trace(ray);
+    return result.valid() && result.objectId == objectId;
 }

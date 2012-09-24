@@ -6,6 +6,7 @@
 #include "Raytracer.h"
 #include "Shader.h"
 #include "Surface.h"
+#include "SurfacePoint.h"
 #include "scene/Scene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -54,12 +55,12 @@ void Renderer::render(Surface& surface, int xOffset, int yOffset, int width, int
                         glm::vec3 direction = p1 + (p2 - p1) * sx + (p3 - p1) * sy - origin;
                         direction = glm::normalize(direction);
 
-                        Ray ray(random);
+                        Ray ray;
                         ray.origin = origin;
                         ray.direction = direction;
 
-                        m_raytracer->trace(ray);
-                        radiance += m_shader->shade(ray);
+                        SurfacePoint surfacePoint = m_raytracer->trace(ray);
+                        radiance += m_shader->shade(surfacePoint, random);
                     }
                 }
                 // Combine new sample with the previous passes.

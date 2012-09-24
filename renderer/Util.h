@@ -26,4 +26,11 @@ void formatSI(std::ostringstream& result, T n, const char* units)
     result << units;
 }
 
+struct NonCopyable
+{
+    NonCopyable& operator=(const NonCopyable&) = delete;
+    NonCopyable(const NonCopyable&) = delete;
+    NonCopyable() = default;
+};
+
 #endif

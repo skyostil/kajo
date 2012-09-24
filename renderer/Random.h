@@ -3,6 +3,7 @@
 #define RANDOM_H
 
 #include <glm/glm.hpp>
+#include "Util.h"
 
 #if defined(USE_SSE2)
 #    include <pmmintrin.h>
@@ -11,7 +12,7 @@
 #endif
 
 // TODO: Use alignas(__m128i) once the compilers support it
-class Random
+class Random: public NonCopyable
 {
 public:
     Random(unsigned seed = 0715517);

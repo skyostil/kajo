@@ -11,6 +11,7 @@
 class Ray;
 class Shader;
 class Surface;
+class SurfacePoint;
 
 namespace scene
 {
@@ -26,19 +27,21 @@ class Raytracer
 public:
     Raytracer(scene::Scene* scene);
 
-    bool trace(Ray& ray) const;
+    SurfacePoint trace(Ray&) const;
+    bool canReach(Ray&, intptr_t objectId) const;
+
     const PrecalculatedScene& precalculatedScene() const;
 
-    void intersect(Ray& ray, const scene::Sphere& sphere, const TransformData& data) const;
-    void intersect(Ray& ray, const scene::Plane& plane, const TransformData& data) const;
+    void intersect(Ray&, SurfacePoint&, const scene::Sphere&, const TransformData&) const;
+    void intersect(Ray&, SurfacePoint&, const scene::Plane&, const TransformData&) const;
 
 private:
     template <typename ObjectType>
     void intersectAll(const std::vector<ObjectType>& objects,
                       const TransformDataList& transformDataList,
-                      Ray& ray) const;
+                      Ray&, SurfacePoint&) const;
 
-    void processIntersection(Ray& ray, float t, intptr_t objectId,
+    void processIntersection(Ray&, SurfacePoint&, float t, intptr_t objectId,
                              const glm::vec3& normal, const glm::vec3& tangent,
                              const glm::vec3& binormal,
                              const scene::Material* material) const;

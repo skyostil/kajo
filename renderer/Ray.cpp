@@ -5,16 +5,8 @@
 
 #include <limits>
 
-Ray::Ray(Random& random):
-    random(random),
-    objectId(0),
+Ray::Ray():
     minDistance(0),
-    maxDistance(std::numeric_limits<float>::infinity()),
-    material(0)
+    maxDistance(std::numeric_limits<float>::infinity())
 {
-}
-
-bool Ray::hit() const
-{
-    return objectId;
 }

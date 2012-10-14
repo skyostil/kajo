@@ -98,7 +98,6 @@ void buildTestScene(scene::Scene& scene)
     Camera camera;
     camera.projection = glm::perspective(45.f, 4.f / 3.f, .1f, 100.f);
     camera.transform = glm::lookAt(glm::vec3(-6, -0.8f, 4), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
-    //camera.transform = glm::lookAt(glm::vec3(-10, -2, 1), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
     scene.camera = camera;
 
     scene.backgroundColor = glm::vec4(.0f, .0f, .0f, 1);

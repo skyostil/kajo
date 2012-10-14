@@ -3,6 +3,7 @@
 #define SHADER_H
 
 #include "PrecalculatedScene.h"
+#include "Random.h"
 #include "Ray.h"
 
 #include <glm/glm.hpp>
@@ -57,9 +58,8 @@ private:
     glm::vec4 sampleLights(const std::vector<ObjectType>& lights,
                            const TransformDataList& transformDataList,
                            const SurfacePoint&, Random&) const;
-    void generateLightSample(Sample&, const scene::Sphere& sphere, const TransformData& data,
-                             const SurfacePoint&) const;
-
+    RandomValue<glm::vec3> generateLightSample(const scene::Sphere& sphere, const TransformData& data,
+                                               const SurfacePoint& surfacePoint, Random& random) const;
 
     template <typename ObjectType>
     float calculateLightProbabilities(const std::vector<ObjectType>& lights,

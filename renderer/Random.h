@@ -14,6 +14,11 @@
 template <typename T>
 struct RandomValue
 {
+    RandomValue():
+        probability(0)
+    {
+    }
+
     explicit RandomValue(T value):
         value(value), probability(1)
     {

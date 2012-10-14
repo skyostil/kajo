@@ -48,7 +48,7 @@ void buildTestScene(scene::Scene& scene)
 
     Sphere sphere;
     sphere.radius = .3f;
-    sphere.material.emission = glm::vec4(1, 1, 1, 0);
+    sphere.material.emission = glm::vec4(1, 1, 1, 0) * 8;
     sphere.transform = glm::translate(sphere.transform, glm::vec3(0, -1.5, 2));
     scene.spheres.push_back(sphere);
 

@@ -11,6 +11,23 @@
 #    include <stdint.h>
 #endif
 
+template <typename T>
+struct RandomValue
+{
+    explicit RandomValue(T value):
+        value(value), probability(1)
+    {
+    }
+
+    RandomValue(T value, float probability):
+        value(value), probability(probability)
+    {
+    }
+
+    T value;
+    float probability;
+};
+
 // TODO: Use alignas(__m128i) once the compilers support it
 class Random: public NonCopyable
 {
@@ -25,9 +42,9 @@ public:
      */
     glm::vec4 generate();
 
-    glm::vec3 generateSpherical();
-
-    glm::vec3 generateCosineHemisphere();
+    RandomValue<glm::vec3> generateSpherical();
+    RandomValue<glm::vec3> generateHemispherical(const glm::vec3& normal);
+    RandomValue<glm::vec3> generateCosineHemispherical(const glm::vec3& normal, const glm::vec3& tangent, const glm::vec3& binormal);
 
 private:
 #if defined(USE_SSE2)

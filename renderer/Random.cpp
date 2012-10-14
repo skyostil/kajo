@@ -50,7 +50,7 @@ glm::vec4 Random::generate()
     return result;
 }
 
-glm::vec3 Random::generateSpherical()
+RandomValue<glm::vec3> Random::generateSpherical()
 {
     glm::vec4 sample = generate();
     sample.y = (sample.y + 1) * M_PI;
@@ -60,17 +60,26 @@ glm::vec3 Random::generateSpherical()
     result.x = r * cosf(sample.y);
     result.y = r * sinf(sample.y);
     result.z = sample.x;
+    return RandomValue<glm::vec3>(result, 1 / (4 * M_PI));
+}
+
+RandomValue<glm::vec3> Random::generateHemispherical(const glm::vec3& normal)
+{
+    RandomValue<glm::vec3> result = generateSpherical();
+    if (glm::dot(result.value, normal) < 0)
+        result.value = -result.value;
+    result.probability = 1 / (2 * M_PI);
     return result;
 }
 
-glm::vec3 Random::generateCosineHemisphere()
+RandomValue<glm::vec3> Random::generateCosineHemispherical(const glm::vec3& normal, const glm::vec3& tangent, const glm::vec3& binormal)
 {
     glm::vec4 sample = generate();
-    sample.x = .5f * sample.x + .5f;
-    float r = sqrtf(sample.x);
+    float u = .5f * sample.x + .5f;
+    float r = sqrtf(u);
     float theta = (sample.y + 1) * M_PI;
     float x = r * cosf(theta);
     float y = r * sinf(theta);
-    float z = sqrtf(std::max(0.f, 1.f - sample.x));
-    return glm::vec3(x, y, z);
+    float z = sqrtf(std::max(0.f, 1.f - u));
+    return RandomValue<glm::vec3>(x * tangent + y * binormal + z * normal, cosf(theta) * M_1_PI);
 }

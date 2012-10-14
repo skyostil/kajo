@@ -85,20 +85,27 @@ glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
             return;
         size_t i = &object - &objects[0];
 
+        // Sample the light
         Sample lightSample(random);
         generateLightSample(lightSample, object, transformDataList[i], surfacePoint);
+        if (lightSample.value == glm::vec4())
+            return;
 
         float bsdfProbability = calculateBSDFProbability(surfacePoint, lightSample.ray.direction);
+        if (bsdfProbability <= 0)
+            return;
+
+        // TODO: Probability for just this single light
         float lightProbabilities =
             calculateLightProbabilities(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
                                         surfacePoint, lightSample.ray.direction);
-        // FIXME: Is this right for multiple lights?
+        // FIXME: Is this right for multiple lights? A: No
         float weight = 1.f / (g_bsdfWeight * bsdfProbability + g_lightWeight * lightProbabilities);
         //printf("%f\n", weight);
         //dump(lightSample);
         //if (lightProbability < 0.0 || lightProbability > 1000)
             //printf("%f\n", weight / lightProbability);
-        if (weight != std::numeric_limits<float>::infinity())
+        //if (weight != std::numeric_limits<float>::infinity())
             color += lightSample.value * weight;
         //color += lightSample;
     });
@@ -128,6 +135,32 @@ void Shader::generateLightSample(Sample& sample, const scene::Sphere& sphere, co
     glm::vec4 randomSample = sample.random.generate();
     float s1 = (randomSample.x * .5f) + .5f;
     float s2 = (randomSample.y * .5f) + .5f;
+    float s3 = (randomSample.z * .5f);
+
+    glm::vec3 lightPos(sphere.transform * glm::vec4(0, 0, 0, 1));
+    glm::vec3 dir(lightPos - surfacePoint.position);
+
+    glm::vec3 samplePos;
+    samplePos.x = sphere.radius * sqrtf(s1) * cosf(2 * M_PI * s2);
+    samplePos.y = sphere.radius * sqrtf(s1) * sinf(2 * M_PI * s2),
+    samplePos.z =
+        sqrtf(fabs(sphere.radius * sphere.radius - samplePos.x * samplePos.x - samplePos.y * samplePos.y)) *
+            sinf(M_PI * s3);
+    samplePos += lightPos;
+
+    sample.ray.direction = glm::normalize(samplePos - surfacePoint.position);
+
+    Ray shadowRay;
+    shadowRay.direction = sample.ray.direction;
+    shadowRay.origin = surfacePoint.position + shadowRay.direction * g_surfaceEpsilon;
+    shadowRay.maxDistance = glm::length(samplePos - surfacePoint.position);
+
+    if (m_raytracer->canReach(shadowRay, reinterpret_cast<intptr_t>(&sphere)))
+        sample.value =
+            surfacePoint.material->diffuse *
+            sphere.material.emission *
+            fabs(glm::dot(surfacePoint.normal, sample.ray.direction));
+#if 0
 
     glm::vec3 lightPos(sphere.transform * glm::vec4(0, 0, 0, 1));
     glm::vec3 dir(lightPos - surfacePoint.position);
@@ -153,15 +186,37 @@ void Shader::generateLightSample(Sample& sample, const scene::Sphere& sphere, co
 
     if (m_raytracer->canReach(shadowRay, reinterpret_cast<intptr_t>(&sphere)))
         sample.value = surfacePoint.material->diffuse * sphere.material.emission * glm::dot(surfacePoint.normal, sample.ray.direction);
+#endif
 }
 
 float Shader::calculateLightProbability(const scene::Sphere& sphere, const TransformData& data,
                                         const SurfacePoint& surfacePoint, const glm::vec3& direction) const
 {
-    //return 1.f;
-
     glm::vec3 lightPos(sphere.transform * glm::vec4(0, 0, 0, 1));
     glm::vec3 dir(lightPos - surfacePoint.position);
+
+    if (glm::dot(dir, surfacePoint.normal) <= 0)
+        return 0;
+
+    Ray lightRay;
+    lightRay.direction = direction;
+    lightRay.origin = surfacePoint.position + lightRay.direction * g_surfaceEpsilon;
+
+    SurfacePoint lightSurfacePoint;
+    m_raytracer->intersect(lightRay, lightSurfacePoint, sphere, data);
+
+    if (!lightSurfacePoint.valid())
+        return 0;
+
+    float dist = dir.length();
+    float solidAngle;
+    if (dist > sphere.radius)
+       solidAngle = 2 * M_PI * (1 - cosf(asinf(sphere.radius / dist)));
+    else
+       solidAngle = 4 * M_PI;
+
+    return 1 / solidAngle;
+#if 0
     float d = (sphere.radius * sphere.radius) / glm::dot(dir, dir);
     float max_cos_theta = sqrtf(1 - d);
 
@@ -193,8 +248,10 @@ float Shader::calculateLightProbability(const scene::Sphere& sphere, const Trans
     //    printf("%f\n", p);
 
     return p;
+#endif
 }
 
+#if 0
 void Shader::generateBSDFSample(Sample& sample, const SurfacePoint& surfacePoint, int depth) const
 {
     sample.ray.direction = sample.random.generateSpherical();
@@ -212,42 +269,112 @@ void Shader::generateBSDFSample(Sample& sample, const SurfacePoint& surfacePoint
             shade(result, sample.random, depth + 1, SampleNonEmissiveObjects);
     }
 }
+#endif
 
 float Shader::calculateBSDFProbability(const SurfacePoint& surfacePoint, const glm::vec3& direction) const
 {
     // Uniform BSDF over the hemisphere.
-    //float hemisphereArea = 4 * M_PI / 2;
+    float hemisphereArea = 4 * M_PI / 2;
     if (glm::dot(direction, surfacePoint.normal) <= 0)
         return 0;
     // FIXME: Is this right?
-    return 0.5f;
-    //return 1.f / hemisphereArea;
+    //return .5f;
+    return 1.f / hemisphereArea;
 }
 
+#if 0
 glm::vec4 Shader::sampleBSDF(const SurfacePoint& surfacePoint, Random& random, int depth) const
 {
-    glm::vec4 color;
-
     Sample bsdfSample(random);
     generateBSDFSample(bsdfSample, surfacePoint, depth);
+    if (bsdfSample.value == glm::vec4())
+        return bsdfSample.value;
+
     float bsdfProbability = calculateBSDFProbability(surfacePoint, bsdfSample.ray.direction);
+    return bsdfSample.value / bsdfProbability;
+/*
     float lightProbability =
         calculateLightProbabilities(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
                                     surfacePoint, bsdfSample.ray.direction);
+    if (lightProbability <= 0)
+        return color;
+
+    float bsdfProbability = calculateBSDFProbability(surfacePoint, bsdfSample.ray.direction);
     float weight = 1.f / (g_bsdfWeight * bsdfProbability + g_lightWeight * lightProbability);
-    if (weight != std::numeric_limits<float>::infinity())
+    //if (weight != std::numeric_limits<float>::infinity())
         color += bsdfSample.value * weight;
     return color;
+*/
 }
+#endif
 
-static float russianRoulette(Random& random, const glm::vec4& probability)
+static RandomValue<bool> russianRoulette(Random& random, const glm::vec4& probability)
 {
     // Note: w component ignored
     float p = std::max(probability.x, std::max(probability.y, probability.z));
     float r = random.generate().x * .5f + .5f;
-    if (p > 0 && r <= p)
-        return 1.f / p;
-    return 0;
+    if (r <= p)
+        return RandomValue<bool>(true, p);
+    return RandomValue<bool>(false, 1 - p);
+}
+
+class Sample
+{
+public:
+    Sample(Random& random):
+        random(random),
+        pdf(0)
+    {
+    }
+
+    Random& random;
+    //Ray ray;
+    glm::vec3 direction;
+    //glm::vec4 value;
+    float pdf;
+};
+
+class BSDF
+{
+public:
+    BSDF(const glm::vec4& color);
+
+    void generateSample(const SurfacePoint& surfacePoint, Random& random, glm::vec3& direction, glm::vec4& value, float& pdf) const;
+    void evaluateSample(const SurfacePoint& surfacePoint, const glm::vec3& direction, glm::vec4& value, float& pdf) const;
+
+private:
+    glm::vec4 m_color;
+};
+
+BSDF::BSDF(const glm::vec4& color):
+    m_color(color)
+{
+}
+
+#if 0
+void BSDF::generateSample(const SurfacePoint& surfacePoint, Random& random,
+                          glm::vec3& direction, glm::vec4& value, float& pdf) const
+{
+    // TODO: Cosine hemisphere distribution
+    direction = random.generateSpherical();
+    if (glm::dot(direction, surfacePoint.normal) < 0)
+        direction = -direction;
+
+    float hemisphereArea = 4 * M_PI / 2;
+    value = m_color * fabs(glm::dot(surfacePoint.normal, direction));
+    pdf = 1 / hemisphereArea;
+}
+#endif
+
+void BSDF::evaluateSample(const SurfacePoint& surfacePoint, const glm::vec3& direction,
+                          glm::vec4& value, float& pdf) const
+{
+    if (glm::dot(direction, surfacePoint.normal) < 0)
+        return;
+
+    float hemisphereArea = 4 * M_PI / 2;
+    value = m_color * fabs(glm::dot(surfacePoint.normal, direction));
+    pdf = 1 / hemisphereArea;
 }
 
 glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int depth, LightSamplingScheme lightSamplingScheme) const
@@ -256,8 +383,34 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
         return m_scene->backgroundColor;
 
     const scene::Material* material = surfacePoint.material;
-    glm::vec4 color = material->emission;
 
+    // Terminate path with Russian roulette
+    auto shouldContinue = russianRoulette(random, material->diffuse);
+    if (!shouldContinue.value || depth >= g_depthLimit)
+        return (1 / shouldContinue.probability) * material->emission;
+
+    // Generate new ray direction based on BSDF
+    //RandomValue<glm::vec3> direction(random.generateSpherical());
+    RandomValue<glm::vec3> direction(random.generateHemispherical(surfacePoint.normal));
+    //RandomValue<glm::vec3> direction(random.generateCosineHemispherical(surfacePoint.normal, surfacePoint.tangent, surfacePoint.binormal));
+
+    Ray ray;
+    ray.direction = direction.value;
+    ray.origin = surfacePoint.position + ray.direction * g_surfaceEpsilon;
+
+    // Trace
+    SurfacePoint result = m_raytracer->trace(ray);
+
+    // Evaluate
+    return
+        (lightSamplingScheme == SampleAllObjects ? material->emission : glm::vec4()) +
+        1 / shouldContinue.probability *
+        1 / direction.probability *
+        M_1_PI *
+        material->diffuse *
+        glm::dot(surfacePoint.normal, ray.direction) *
+        shade(result, random, depth + 1, SampleNonEmissiveObjects);
+#if 0
     // If we are only sampling indirect lighting, skip emissive objects. This
     // is done to avoid oversampling emissive objects.
     if (lightSamplingScheme == SampleNonEmissiveObjects && (color.x || color.y || color.z))
@@ -274,17 +427,19 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
              m_raytracer->precalculatedScene().sphereTransforms, surfacePoint,
              direction)) + glm::vec4(surfacePoint.normal.xyzx);*/
 
-    // Sample BSDF
-    color += invTerminationProbability * sampleBSDF(surfacePoint, random, depth);
-
     // Sample lights
     color += invTerminationProbability *
         sampleLights(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms, surfacePoint, random);
+
+    // Sample BSDF
+    // TODO: EvaluateBSDF + recursion
+    color += invTerminationProbability * sampleBSDF(surfacePoint, random, depth);
 
     // FIXME: Is this correct?
     //color /= 2;
 
     return color;
+#endif
 
 #if 0
     glm::vec3 dir = ray.random.generateSpherical();

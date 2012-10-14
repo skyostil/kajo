@@ -40,12 +40,12 @@ private:
         }
 
         int pass;
-        int samples;
+        long long samples;
 
         std::chrono::monotonic_clock::time_point startTime;
-        int startSamples;
+        long long startSamples;
 
-        int samplesPerSecond;
+        long long samplesPerSecond;
     };
 
     std::chrono::monotonic_clock::time_point m_lastUpdate;

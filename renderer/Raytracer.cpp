@@ -56,7 +56,7 @@ void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Sph
     glm::vec3 normal = origin + dir * t0;
     normal = glm::normalize(glm::mat3(sphere.transform) * normal);
     intptr_t objectId = reinterpret_cast<intptr_t>(&sphere);
-#if 0
+#if 1
     glm::vec3 tangent;
     float smallest = std::min(normal.z, std::min(normal.x, normal.y));
     if (normal.x == smallest)
@@ -66,8 +66,9 @@ void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Sph
     else
         tangent = glm::vec3(-normal.y, normal.x, 0);
     tangent = glm::normalize(tangent);
-#endif
+#else
     glm::vec3 tangent = glm::cross(normal, glm::vec3(0.f, 1.f, 0.f));
+#endif
     glm::vec3 binormal = glm::cross(normal, tangent);
 
     processIntersection(ray, surfacePoint, t0 * data.determinant, objectId, normal,
@@ -78,7 +79,7 @@ void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Pla
 {
     glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
     glm::vec3 origin = ((data.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
-    glm::vec3 normal(0, 1.f, 0);
+    glm::vec3 normal(0, 1, 0);
 
     float denom = glm::dot(dir, normal);
 

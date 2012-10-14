@@ -105,9 +105,9 @@ void Preview::updateScreen(int xOffset, int yOffset, int width, int height)
 
 void Preview::drawStatusLine()
 {
-    int totalSamples = 0;
-    int totalPerSecond = 0;
-    int maxPerSecond = 0;
+    long long totalSamples = 0;
+    long long totalPerSecond = 0;
+    long long maxPerSecond = 0;
     for (auto& thread: m_threadStatistics)
     {
         totalSamples += thread.second.samples;

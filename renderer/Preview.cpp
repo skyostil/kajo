@@ -40,7 +40,7 @@ std::unique_ptr<Preview> Preview::create(Image* image)
 Preview::Preview(Image* image):
     m_image(image),
     m_font(0),
-    m_startTime(std::chrono::monotonic_clock::now())
+    m_startTime(std::chrono::steady_clock::now())
 {
 }
 
@@ -60,7 +60,7 @@ void Preview::update(std::thread::id threadId, int pass, int samples, int xOffse
     stats.samples += samples * width * height;
     stats.pass = pass;
 
-    auto now = std::chrono::monotonic_clock::now();
+    auto now = std::chrono::steady_clock::now();
     if (now - stats.startTime > std::chrono::seconds(1))
     {
         stats.samplesPerSecond = stats.samples - stats.startSamples;
@@ -114,7 +114,7 @@ void Preview::drawStatusLine()
         totalPerSecond += thread.second.samplesPerSecond;
         maxPerSecond = std::max(maxPerSecond, thread.second.samplesPerSecond);
     }
-    auto elapsed = std::chrono::monotonic_clock::now() - m_startTime;
+    auto elapsed = std::chrono::steady_clock::now() - m_startTime;
 
     std::ostringstream status;
     status << std::chrono::duration_cast<std::chrono::minutes>(elapsed).count() << " min ";

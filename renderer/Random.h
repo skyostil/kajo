@@ -51,6 +51,8 @@ public:
     RandomValue<glm::vec3> generateHemispherical(const glm::vec3& normal);
     RandomValue<glm::vec3> generateCosineHemispherical(const glm::vec3& normal, const glm::vec3& tangent, const glm::vec3& binormal);
 
+    static RandomValue<bool> russianRoulette(Random& random, const glm::vec4& probability);
+
 private:
 #if defined(USE_SSE2)
     __m128i m_state;

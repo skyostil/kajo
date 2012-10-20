@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 #include <memory>
+#include <stdint.h>
 #include <vector>
 
 class Ray;

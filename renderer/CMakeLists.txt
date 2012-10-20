@@ -4,6 +4,8 @@ find_package(SDL_ttf)
 
 add_executable(
     renderer
+    BSDF.cpp
+    BSDF.h
     Image.cpp
     Image.h
     Main.cpp

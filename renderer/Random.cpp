@@ -83,3 +83,13 @@ RandomValue<glm::vec3> Random::generateCosineHemispherical(const glm::vec3& norm
     float z = sqrtf(std::max(0.f, 1.f - u));
     return RandomValue<glm::vec3>(x * tangent + y * binormal + z * normal, cosf(theta) * M_1_PI);
 }
+
+RandomValue<bool> Random::russianRoulette(Random& random, const glm::vec4& probability)
+{
+    // Note: w component ignored
+    float p = std::max(probability.x, std::max(probability.y, probability.z));
+    float r = random.generate().x * .5f + .5f;
+    if (r <= p)
+        return RandomValue<bool>(true, p);
+    return RandomValue<bool>(false, 1 - p);
+}

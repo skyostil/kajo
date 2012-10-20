@@ -42,14 +42,14 @@ private:
         int pass;
         long long samples;
 
-        std::chrono::monotonic_clock::time_point startTime;
+        std::chrono::steady_clock::time_point startTime;
         long long startSamples;
 
         long long samplesPerSecond;
     };
 
-    std::chrono::monotonic_clock::time_point m_lastUpdate;
-    std::chrono::monotonic_clock::time_point m_startTime;
+    std::chrono::steady_clock::time_point m_lastUpdate;
+    std::chrono::steady_clock::time_point m_startTime;
     std::map<std::thread::id, ThreadStatistics> m_threadStatistics;
 };
 

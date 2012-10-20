@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 
+class BSDF;
 class Random;
 class Raytracer;
 class SurfacePoint;
@@ -37,27 +38,10 @@ public:
     glm::vec4 shade(const SurfacePoint& surfacePoint, Random& random, int depth = 0, LightSamplingScheme = SampleAllObjects) const;
 
 private:
-    class Sample
-    {
-    public:
-        Sample(Random& random):
-            random(random)
-        {
-        }
-
-        Random& random;
-        Ray ray;
-        glm::vec4 value;
-    };
-
-    glm::vec4 sampleBSDF(const SurfacePoint&, Random&, int depth) const;
-    void generateBSDFSample(Sample&, const SurfacePoint&, int depth) const;
-    float calculateBSDFProbability(const SurfacePoint&, const glm::vec3& direction) const;
-
     template <typename ObjectType>
     glm::vec4 sampleLights(const std::vector<ObjectType>& lights,
                            const TransformDataList& transformDataList,
-                           const SurfacePoint&, Random&) const;
+                           const SurfacePoint&, BSDF&, Random&) const;
     RandomValue<glm::vec3> generateLightSample(const scene::Sphere& sphere, const TransformData& data,
                                                const SurfacePoint& surfacePoint, Random& random) const;
 

@@ -1,18 +1,24 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef BSDF_H
-#define BSDF_H
+#ifndef LIGHT_H
+#define LIGHT_H
 
 #include <glm/glm.hpp>
 
-class SurfacePoint;
 class Random;
+class SurfacePoint;
+class TransformData;
+
+namespace scene
+{
+class Sphere;
+}
 
 template <typename T> class RandomValue;
 
-class BSDF
+class Light
 {
 public:
-    BSDF(const SurfacePoint*);
+    Light(const SurfacePoint*);
 
     virtual RandomValue<glm::vec3> generateSample(Random& random) const = 0;
     virtual glm::vec4 evaluateSample(const glm::vec3& direction) const = 0;
@@ -22,16 +28,19 @@ protected:
     const SurfacePoint* m_surfacePoint;
 };
 
-class LambertBSDF: public BSDF
+class SphericalLight: public Light
 {
 public:
-    LambertBSDF(const SurfacePoint*, const glm::vec4& color);
+    SphericalLight(const SurfacePoint*, const scene::Sphere*, const TransformData*, const glm::vec4& emission);
 
     RandomValue<glm::vec3> generateSample(Random& random) const override;
     glm::vec4 evaluateSample(const glm::vec3& direction) const override;
     float sampleProbability(const glm::vec3& direction) const override;
+
 private:
-    glm::vec4 m_color;
+    const scene::Sphere* m_sphere;
+    const TransformData* m_transformData;
+    glm::vec4 m_emission;
 };
 
-#endif // BSDF_H
+#endif // LIGHT_H

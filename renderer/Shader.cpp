@@ -1,6 +1,7 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
 #include "BSDF.h"
+#include "Light.h"
 #include "Random.h"
 #include "Ray.h"
 #include "Raytracer.h"
@@ -27,6 +28,15 @@ Shader::Shader(scene::Scene* scene, Raytracer* raytracer):
 }
 
 template <typename ObjectType>
+Light* createLight(const SurfacePoint*, const ObjectType*, const TransformData*);
+
+template <>
+Light* createLight(const SurfacePoint* surfacePoint, const scene::Sphere* sphere, const TransformData* transformData)
+{
+    return new SphericalLight(surfacePoint, sphere, transformData, sphere->material.emission);
+}
+
+template <typename ObjectType>
 glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
                                const TransformDataList& transformDataList,
                                const SurfacePoint& surfacePoint, BSDF& bsdf,
@@ -39,9 +49,10 @@ glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
         if (reinterpret_cast<intptr_t>(&object) == surfacePoint.objectId)
             return;
         size_t i = &object - &objects[0];
+        std::unique_ptr<Light> light(createLight(&surfacePoint, &object, &transformDataList[i]));
 
         // Generate a direction toward the light
-        RandomValue<glm::vec3> lightDirection = generateLightSample(object, transformDataList[i], surfacePoint, random);
+        RandomValue<glm::vec3> lightDirection = light->generateSample(random);
         if (!lightDirection.probability)
             return;
 
@@ -59,11 +70,10 @@ glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
             return;
 
         color +=
-                M_1_PI *
                 1 / (bsdfProbability + lightDirection.probability) *
-                glm::dot(surfacePoint.normal, lightDirection.value) *
-                surfacePoint.material->diffuse *
-                object.material.emission;
+                M_1_PI *
+                bsdf.evaluateSample(lightDirection.value) *
+                light->evaluateSample(lightDirection.value);
     });
     return color;
 }
@@ -80,43 +90,10 @@ float Shader::calculateLightProbabilities(const std::vector<ObjectType>& objects
         if (reinterpret_cast<intptr_t>(&object) == surfacePoint.objectId)
             return;
         size_t i = &object - &objects[0];
-        totalPdf += calculateLightProbability(object, transformDataList[i], surfacePoint, direction);
+        std::unique_ptr<Light> light(createLight(&surfacePoint, &object, &transformDataList[i]));
+        totalPdf += light->sampleProbability(direction);
     });
     return totalPdf;
-}
-
-RandomValue<glm::vec3> Shader::generateLightSample(const scene::Sphere& sphere, const TransformData& data,
-                                                   const SurfacePoint& surfacePoint, Random& random) const
-{
-    glm::vec3 lightPos(sphere.transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 w = lightPos - surfacePoint.position;
-    glm::vec3 u = glm::normalize(glm::cross(fabs(w.x) > .1 ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0), w));
-    glm::vec3 v = glm::cross(w, u);
-    float cos_a_max = sqrtf(1 - sphere.radius * sphere.radius / glm::dot(w, w));
-    glm::vec4 randomSample = random.generate();
-    float s1 = (randomSample.x * .5f) + .5f;
-    float s2 = (randomSample.y * .5f) + .5f;
-    float cos_a = 1 - s1 + s1 * cos_a_max;
-    float sin_a = sqrtf(1 - cos_a * cos_a);
-    float phi = 2 * M_PI * s2;
-
-    RandomValue<glm::vec3> result;
-    result.value = glm::normalize(u * cosf(phi) * sin_a + v * sinf(phi) * sin_a + w * cos_a);
-    result.probability = 1 / ((1 - cos_a_max) * (2 * M_PI));
-    return result;
-}
-
-float Shader::calculateLightProbability(const scene::Sphere& sphere, const TransformData& data,
-                                        const SurfacePoint& surfacePoint, const glm::vec3& direction) const
-{
-    glm::vec3 lightPos(sphere.transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 w = lightPos - surfacePoint.position;
-    float cos_a_max = sqrtf(1 - sphere.radius * sphere.radius / glm::dot(w, w));
-    float cos_a = glm::dot(direction, glm::normalize(w));
-
-    if (cos_a < cos_a_max)
-        return 0;
-    return 1 / ((1 - cos_a_max) * (2 * M_PI));
 }
 
 glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int depth, LightSamplingScheme lightSamplingScheme) const
@@ -145,11 +122,10 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
     // Generate new ray direction based on BSDF
     RandomValue<glm::vec3> bsdfDirection = bsdf.generateSample(random);
 
+    // Trace
     Ray ray;
     ray.direction = bsdfDirection.value;
     ray.origin = surfacePoint.position + ray.direction * g_surfaceEpsilon;
-
-    // Trace
     SurfacePoint result = m_raytracer->trace(ray);
 
     // Calculate light probabilities in the BSDF direction

@@ -42,15 +42,11 @@ private:
     glm::vec4 sampleLights(const std::vector<ObjectType>& lights,
                            const TransformDataList& transformDataList,
                            const SurfacePoint&, BSDF&, Random&) const;
-    RandomValue<glm::vec3> generateLightSample(const scene::Sphere& sphere, const TransformData& data,
-                                               const SurfacePoint& surfacePoint, Random& random) const;
 
     template <typename ObjectType>
     float calculateLightProbabilities(const std::vector<ObjectType>& lights,
                                       const TransformDataList& transformDataList,
                                       const SurfacePoint&, const glm::vec3& direction) const;
-    float calculateLightProbability(const scene::Sphere& sphere, const TransformData& data,
-                                    const SurfacePoint&, const glm::vec3& direction) const;
 
     scene::Scene* m_scene;
     Raytracer* m_raytracer;

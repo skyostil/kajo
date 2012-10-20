@@ -8,6 +8,8 @@ add_executable(
     BSDF.h
     Image.cpp
     Image.h
+    Light.cpp
+    Light.h
     Main.cpp
     PrecalculatedScene.cpp
     PrecalculatedScene.h

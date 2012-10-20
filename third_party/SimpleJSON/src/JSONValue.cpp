@@ -74,7 +74,7 @@ JSONValue *JSONValue::Parse(const wchar_t **data)
 	}
 	
 	// Is it a number?
-	else if (**data == L'-' || (**data >= L'0' && **data <= L'9'))
+	else if (**data == L'-' || (**data >= L'0' && **data <= L'9') || (**data == L'.'))
 	{
 		// Negative?
 		bool neg = **data == L'-';
@@ -87,7 +87,7 @@ JSONValue *JSONValue::Parse(const wchar_t **data)
 			(*data)++;
 		else if (**data >= L'1' && **data <= L'9')
 			number = JSON::ParseInt(data);
-		else
+		else if (**data != L'.')
 			return NULL;
 		
 		// Could be a decimal now...
@@ -224,6 +224,20 @@ JSONValue *JSONValue::Parse(const wchar_t **data)
 			}
 			
 			(*data)++;
+
+			// More whitespace?
+			if (!JSON::SkipWhitespace(data))
+			{
+				FREE_OBJECT(object);
+				return NULL;
+			}
+
+			// End of object?
+			if (**data == L'}')
+			{
+				(*data)++;
+				return new JSONValue(object);
+			}
 		}
 		
 		// Only here if we ran out of data
@@ -285,8 +299,22 @@ JSONValue *JSONValue::Parse(const wchar_t **data)
 				FREE_ARRAY(array);
 				return NULL;
 			}
-			
+
 			(*data)++;
+			
+			// More whitespace?
+			if (!JSON::SkipWhitespace(data))
+			{
+				FREE_ARRAY(array);
+				return NULL;
+			}
+
+			// End of array?
+			if (**data == L']')
+			{
+				(*data)++;
+				return new JSONValue(array);
+			}
 		}
 		
 		// Only here if we ran out of data

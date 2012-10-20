@@ -35,6 +35,7 @@ target_link_libraries(
     renderer
     scene
     lodepng
+    simplejson
     ${SDL_LIBRARY}
     ${SDLTTF_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT})

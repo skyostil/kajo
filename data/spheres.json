@@ -1,0 +1,75 @@
+{
+    "camera": {
+        "projection": "perspective(45, 1.33, .1, 100)",
+        "transform": "lookat(-6, -.8, 4, 0, 0, 0, 0, -1, 0)",
+    },
+    "background": "#000",
+    "objects": [
+        {
+            "type": "sphere",
+            "radius": 1,
+            "diffuse": "#fff",
+            "transform": "translate(-2, 0, 0)",
+        },
+        {
+            "type": "sphere",
+            "radius": 1,
+            "diffuse": "#c22",
+            "transform": "translate(1, 0, .5)",
+        },
+        {
+            "type": "sphere",
+            "radius": 1,
+            "diffuse": "#2c2",
+            "transform": "translate(4, 0, 1)",
+        },
+        {
+            "type": "sphere",
+            "radius": 1,
+            "diffuse": "#22c",
+            "transform": "translate(7, 0, 1.5)",
+        },
+        {
+            "type": "sphere",
+            "radius": .3,
+            "emission": "rgb(8, 8, 8)",
+            "transform": "translate(0, -1.5, 2)",
+        },
+        {
+            "name": "ground",
+            "type": "plane",
+            "diffuse": "#666",
+            "transform": "translate(0, 1, 0)",
+        },
+        {
+            "name": "wall 1",
+            "type": "plane",
+            "diffuse": "#fff",
+            "transform": "rotate(-90, 1, 0, 0) translate(0, 2, 0)",
+        },
+        {
+            "name": "wall 2",
+            "type": "plane",
+            "diffuse": "#fff",
+            "transform": "rotate(-90, 0, 0, 1) translate(0, 10, 0)",
+        },
+        {
+            "name": "wall 3",
+            "type": "plane",
+            "diffuse": "#fff",
+            "transform": "rotate(90, 0, 0, 1) translate(0, 8, 0)",
+        },
+        {
+            "name": "wall 4",
+            "type": "plane",
+            "diffuse": "#fff",
+            "transform": "rotate(90, 1, 0, 0) translate(0, 6, 0)",
+        },
+        {
+            "name": "ceiling",
+            "type": "plane",
+            "diffuse": "#fff",
+            "transform": "rotate(180, 1, 0, 0) translate(0, 2, 0)",
+        },
+    ]
+}

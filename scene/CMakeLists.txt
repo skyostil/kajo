@@ -1,7 +1,14 @@
 add_library(
     scene STATIC
+    Parser.h
+    Parser.cpp
     Scene.h
     Scene.cpp
+)
+
+target_link_libraries(
+    scene
+    simplejson
 )
 
 if(!APPLE)

@@ -133,6 +133,8 @@ void Raytracer::processIntersection(Ray& ray, SurfacePoint& surfacePoint,
 SurfacePoint Raytracer::trace(Ray& ray) const
 {
     SurfacePoint surfacePoint;
+    surfacePoint.view = ray.direction;
+
     intersectAll(m_scene->planes, m_precalcScene->planeTransforms, ray, surfacePoint);
     intersectAll(m_scene->spheres, m_precalcScene->sphereTransforms, ray, surfacePoint);
 

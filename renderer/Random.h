@@ -50,8 +50,10 @@ public:
     RandomValue<glm::vec3> generateSpherical();
     RandomValue<glm::vec3> generateHemispherical(const glm::vec3& normal);
     RandomValue<glm::vec3> generateCosineHemispherical(const glm::vec3& normal, const glm::vec3& tangent, const glm::vec3& binormal);
+    RandomValue<glm::vec3> generatePhong(const glm::vec3& normal, float exponent);
 
-    static RandomValue<bool> russianRoulette(Random& random, const glm::vec4& probability);
+    RandomValue<bool> russianRoulette(float probability);
+    RandomValue<bool> russianRoulette(const glm::vec4& probability);
 
 private:
 #if defined(USE_SSE2)

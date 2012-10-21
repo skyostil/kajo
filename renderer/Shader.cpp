@@ -39,7 +39,7 @@ Light* createLight(const SurfacePoint* surfacePoint, const scene::Sphere* sphere
 template <typename ObjectType>
 glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
                                const TransformDataList& transformDataList,
-                               const SurfacePoint& surfacePoint, BSDF& bsdf,
+                               const SurfacePoint& surfacePoint, const BSDF& bsdf,
                                Random& random) const
 {
     glm::vec4 color;
@@ -71,8 +71,8 @@ glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
 
         color +=
                 1 / (bsdfProbability + lightDirection.probability) *
-                M_1_PI *
                 bsdf.evaluateSample(lightDirection.value) *
+                std::max(0.f, glm::dot(surfacePoint.normal, lightDirection.value)) *
                 light->evaluateSample(lightDirection.value);
     });
     return color;
@@ -101,46 +101,45 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
     if (!surfacePoint.valid() || !surfacePoint.material)
         return m_scene->backgroundColor;
 
+    // Account for emission
     const scene::Material* material = surfacePoint.material;
-    LambertBSDF bsdf(&surfacePoint, material->diffuse);
+    glm::vec4 radiance = (lightSamplingScheme == SampleAllObjects) ? material->emission : glm::vec4();
 
     // Terminate path with Russian roulette
-    auto shouldContinue = Random::russianRoulette(random, material->diffuse);
+    auto shouldContinue = random.russianRoulette(glm::max(material->diffuse, material->specular));
+    radiance *= 1 / shouldContinue.probability;
+
     if (!shouldContinue.value || depth >= g_depthLimit)
-        return (1 / shouldContinue.probability) * material->emission;
+        return radiance;
 
-    // Account for emission
-    glm::vec4 color;
-    if (lightSamplingScheme == SampleAllObjects)
-        color = material->emission;
+    // Choose BSDF to be used
+    float totalDiffuse = material->diffuse.x + material->diffuse.y + material->diffuse.z;
+    float totalSpecular = material->specular.x + material->specular.y + material->specular.z;
+    float diffuseProbability = totalDiffuse / (totalDiffuse + totalSpecular);
+    auto diffuseSample = random.russianRoulette(diffuseProbability);
 
-    // Sample all lights
-    color +=
-        1 / shouldContinue.probability *
-        sampleLights(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms, surfacePoint, bsdf, random);
+    // Shade using the BSDF
+    if (!diffuseSample.value) {
+        if (material->specularExponent) {
+            PhongBSDF bsdf(&surfacePoint, material->specular, material->specularExponent);
+            return radiance +
+                   1 / shouldContinue.probability *
+                   1 / diffuseSample.probability *
+                   shadeWithBSDF(bsdf, surfacePoint, random, depth, lightSamplingScheme);
+        } else {
+            IdealReflectorBSDF bsdf(&surfacePoint, material->specular);
+            return radiance +
+                   1 / shouldContinue.probability *
+                   1 / diffuseSample.probability *
+                   shadeWithBSDF(bsdf, surfacePoint, random, depth, lightSamplingScheme);
+        }
+    }
 
-    // Generate new ray direction based on BSDF
-    RandomValue<glm::vec3> bsdfDirection = bsdf.generateSample(random);
-
-    // Trace
-    Ray ray;
-    ray.direction = bsdfDirection.value;
-    ray.origin = surfacePoint.position + ray.direction * g_surfaceEpsilon;
-    SurfacePoint result = m_raytracer->trace(ray);
-
-    // Calculate light probabilities in the BSDF direction
-    float lightProbability =
-        calculateLightProbabilities(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
-                                    surfacePoint, bsdfDirection.value);
-
-    // Evaluate BSDF
-    color +=
-            1 / shouldContinue.probability *
-            1 / (lightProbability + bsdfDirection.probability) *
-            M_1_PI *
-            bsdf.evaluateSample(ray.direction) *
-            shade(result, random, depth + 1, SampleNonEmissiveObjects);
-    return color;
+    LambertBSDF bsdf(&surfacePoint, material->diffuse);
+    return radiance +
+           1 / shouldContinue.probability *
+           1 / diffuseSample.probability *
+           shadeWithBSDF(bsdf, surfacePoint, random, depth, lightSamplingScheme);
 #if 0
     // If we are only sampling indirect lighting, skip emissive objects. This
     // is done to avoid oversampling emissive objects.
@@ -299,4 +298,37 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
     return color;
 #endif
 #endif
+}
+
+glm::vec4 Shader::shadeWithBSDF(const BSDF& bsdf, const SurfacePoint& surfacePoint, Random& random,
+                                int depth, LightSamplingScheme lightSamplingScheme) const
+{
+    // Sample all lights
+    glm::vec4 radiance =
+        sampleLights(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms, surfacePoint, bsdf, random);
+
+    // Generate new ray direction based on BSDF
+    RandomValue<glm::vec3> bsdfDirection = bsdf.generateSample(random);
+    if (!bsdfDirection.probability)
+        return radiance;
+
+    // Trace
+    Ray ray;
+    ray.direction = bsdfDirection.value;
+    ray.origin = surfacePoint.position + ray.direction * g_surfaceEpsilon;
+    SurfacePoint result = m_raytracer->trace(ray);
+
+    // Calculate light probabilities in the BSDF direction
+    float lightProbability =
+        calculateLightProbabilities(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
+                                    surfacePoint, bsdfDirection.value);
+
+    // Evaluate BSDF
+    radiance +=
+            1 / (lightProbability + bsdfDirection.probability) *
+            bsdf.evaluateSample(ray.direction) *
+            std::max(0.f, glm::dot(surfacePoint.normal, ray.direction)) *
+            shade(result, random, depth + 1, SampleNonEmissiveObjects);
+
+    return radiance;
 }

@@ -168,6 +168,10 @@ static void parseObjects(scene::Scene& scene, JSONArray data)
 	scene::Material material;
         if (objectData.find(L"diffuse") != objectData.end())
             material.diffuse = parseColor(objectData[L"diffuse"]->AsString());
+        if (objectData.find(L"specular") != objectData.end())
+            material.specular = parseColor(objectData[L"specular"]->AsString());
+        if (objectData.find(L"specularExponent") != objectData.end())
+            material.specularExponent = objectData[L"specularExponent"]->AsNumber();
         if (objectData.find(L"emission") != objectData.end())
             material.emission = parseColor(objectData[L"emission"]->AsString());
 

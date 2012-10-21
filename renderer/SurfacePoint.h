@@ -21,6 +21,7 @@ public:
     float minDistance; // Assumed to be >= 0
     float maxDistance;
     glm::vec3 position;
+    glm::vec3 view;
     glm::vec3 normal;
     glm::vec3 tangent;
     glm::vec3 binormal;

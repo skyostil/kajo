@@ -34,4 +34,29 @@ private:
     glm::vec4 m_color;
 };
 
+class PhongBSDF: public BSDF
+{
+public:
+    PhongBSDF(const SurfacePoint*, const glm::vec4& color, float exponent);
+
+    RandomValue<glm::vec3> generateSample(Random& random) const override;
+    glm::vec4 evaluateSample(const glm::vec3& direction) const override;
+    float sampleProbability(const glm::vec3& direction) const override;
+private:
+    glm::vec4 m_color;
+    float m_exponent;
+};
+
+class IdealReflectorBSDF: public BSDF
+{
+public:
+    IdealReflectorBSDF(const SurfacePoint*, const glm::vec4& color);
+
+    RandomValue<glm::vec3> generateSample(Random& random) const override;
+    glm::vec4 evaluateSample(const glm::vec3& direction) const override;
+    float sampleProbability(const glm::vec3& direction) const override;
+private:
+    glm::vec4 m_color;
+};
+
 #endif // BSDF_H

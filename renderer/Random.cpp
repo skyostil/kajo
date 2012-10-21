@@ -84,12 +84,58 @@ RandomValue<glm::vec3> Random::generateCosineHemispherical(const glm::vec3& norm
     return RandomValue<glm::vec3>(x * tangent + y * binormal + z * normal, cosf(theta) * M_1_PI);
 }
 
-RandomValue<bool> Random::russianRoulette(Random& random, const glm::vec4& probability)
+RandomValue<glm::vec3> Random::generatePhong(const glm::vec3& normal, float exponent)
+{
+    // Compact Metallic Reflectance Models
+    glm::vec4 sample = generate();
+    float u = .5f * sample.x + .5f;
+    float v = .5f * sample.y + .5f;
+    float a = acosf(powf(u, 1.f / (exponent + 1)));
+    float phi = 2 * M_PI * v;
+/*
+    glm::vec3 k = view;
+    glm::vec3 i = glm::normalize(glm::cross(view, normal));
+    glm::vec3 j = glm::cross(i, k);
+*/
+    /*glm::vec3 reflection =
+        sinf(a) * cosf(phi) * i +
+        sinf(a) * sinf(phi) * j +
+        cosf(a) * k;
+    */
+    glm::vec3 result = glm::vec3(sinf(a) * cosf(phi),
+                                 sinf(a) * sinf(phi),
+                                 cosf(a));
+    //glm::vec3 light = glm::dot(normal, reflection) * normal - reflection;
+/*
+    printf("%f, %f => %f\n", a, phi, glm::dot(light, normal));
+    dump(normal);
+    dump(reflection);
+    dump(light);*/
+    //if (glm::dot(light, normal) < 0)
+        //return RandomValue<glm::vec3>();
+    //return RandomValue<glm::vec3>(light, 0.001f);
+    //light = view;
+    //light = normal;
+    //return RandomValue<glm::vec3>(light, 0.1f);
+    //glm::vec3 half = glm::normalize(view + light);
+    //if (glm::dot(light, normal) < 0)
+        //goto again;
+    //return RandomValue<glm::vec3>(light, (n + 1) / (2 * M_PI) * powf(cosf(a), n) * sinf(a));
+    return RandomValue<glm::vec3>(result, (exponent + 1) / (2 * M_PI) * powf(cosf(a), exponent) * sinf(a));
+    //return RandomValue<glm::vec3>(light, (n + 1) / (2 * M_PI));
+}
+
+RandomValue<bool> Random::russianRoulette(const glm::vec4& probability)
 {
     // Note: w component ignored
     float p = std::max(probability.x, std::max(probability.y, probability.z));
-    float r = random.generate().x * .5f + .5f;
-    if (r <= p)
-        return RandomValue<bool>(true, p);
-    return RandomValue<bool>(false, 1 - p);
+    return russianRoulette(p);
+}
+
+RandomValue<bool> Random::russianRoulette(float probability)
+{
+    float r = generate().x * .5f + .5f;
+    if (r <= probability)
+        return RandomValue<bool>(true, probability);
+    return RandomValue<bool>(false, 1 - probability);
 }

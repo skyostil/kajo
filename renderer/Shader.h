@@ -35,13 +35,15 @@ public:
         SampleAllObjects,
     };
 
-    glm::vec4 shade(const SurfacePoint& surfacePoint, Random& random, int depth = 0, LightSamplingScheme = SampleAllObjects) const;
+    glm::vec4 shade(const SurfacePoint&, Random&, int depth = 0, LightSamplingScheme = SampleAllObjects) const;
 
 private:
+    glm::vec4 shadeWithBSDF(const BSDF&, const SurfacePoint&, Random&, int depth, LightSamplingScheme) const;
+
     template <typename ObjectType>
     glm::vec4 sampleLights(const std::vector<ObjectType>& lights,
                            const TransformDataList& transformDataList,
-                           const SurfacePoint&, BSDF&, Random&) const;
+                           const SurfacePoint&, const BSDF&, Random&) const;
 
     template <typename ObjectType>
     float calculateLightProbabilities(const std::vector<ObjectType>& lights,

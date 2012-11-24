@@ -174,6 +174,10 @@ static void parseObjects(scene::Scene& scene, JSONArray data)
             material.specularExponent = objectData[L"specularExponent"]->AsNumber();
         if (objectData.find(L"emission") != objectData.end())
             material.emission = parseColor(objectData[L"emission"]->AsString());
+        if (objectData.find(L"transparency") != objectData.end())
+            material.transparency = parseColor(objectData[L"transparency"]->AsString());
+        if (objectData.find(L"refractiveIndex") != objectData.end())
+            material.refractiveIndex = objectData[L"refractiveIndex"]->AsNumber();
 
         glm::mat4 transform;
         if (objectData.find(L"transform") != objectData.end())

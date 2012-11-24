@@ -8,7 +8,10 @@
         {
             "type": "sphere",
             "radius": 1,
-            "diffuse": "#fff",
+            "specular": "#888",
+            "specularExponent": 100,
+            "transparency": "#dde",
+            "refractiveIndex": 2.0,
             "transform": "translate(-2, 0, 0)",
         },
         {
@@ -33,8 +36,8 @@
         {
             "type": "sphere",
             "radius": .3,
-            "emission": "rgb(8, 8, 8)",
-            "transform": "translate(0, -1.5, 2)",
+            "emission": "rgb(16, 16, 16)",
+            "transform": "translate(-1, -1.5, 2)",
         },
         {
             "name": "ground",

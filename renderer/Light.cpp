@@ -2,40 +2,51 @@
 
 #include "Light.h"
 #include "Random.h"
+#include "Ray.h"
+#include "Raytracer.h"
 #include "SurfacePoint.h"
 #include "scene/Scene.h"
 
-Light::Light(const SurfacePoint* surfacePoint):
-    m_surfacePoint(surfacePoint)
+Light::Light(const SurfacePoint* surfacePoint, const Raytracer* raytracer):
+    m_surfacePoint(surfacePoint),
+    m_raytracer(raytracer)
 {
 }
 
-SphericalLight::SphericalLight(const SurfacePoint* surfacePoint, const scene::Sphere* sphere,
+SphericalLight::SphericalLight(const SurfacePoint* surfacePoint, const Raytracer* raytracer,
+                               const scene::Sphere* sphere,
                                const TransformData* transformData, const glm::vec4& emission):
-    Light(surfacePoint),
+    Light(surfacePoint, raytracer),
     m_sphere(sphere),
     m_transformData(transformData),
     m_emission(emission)
 {
 }
 
+float SphericalLight::solidAngle(const glm::vec3& lightPos) const
+{
+    float dist = glm::length(lightPos - m_surfacePoint->position);
+    if (dist < m_sphere->radius)
+        return 4 * M_PI; // Full sphere
+    return 2 * M_PI * (1 - cosf(asinf(m_sphere->radius / dist)));
+}
+
 RandomValue<glm::vec3> SphericalLight::generateSample(Random& random) const
 {
+    // From "Lightcuts: A Scalable Approach to Illumination"
     glm::vec3 lightPos(m_sphere->transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 w = lightPos - m_surfacePoint->position;
-    glm::vec3 u = glm::normalize(glm::cross(fabs(w.x) > .1 ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0), w));
-    glm::vec3 v = glm::cross(w, u);
-    float cos_a_max = sqrtf(1 - m_sphere->radius * m_sphere->radius / glm::dot(w, w));
     glm::vec4 randomSample = random.generate();
     float s1 = (randomSample.x * .5f) + .5f;
     float s2 = (randomSample.y * .5f) + .5f;
-    float cos_a = 1 - s1 + s1 * cos_a_max;
-    float sin_a = sqrtf(1 - cos_a * cos_a);
-    float phi = 2 * M_PI * s2;
+    float s3 = (randomSample.z * .5f) + .5f;
+
+    float x = m_sphere->radius * sqrtf(s1) * cosf(2 * M_PI * s2);
+    float y = m_sphere->radius * sqrtf(s1) * sinf(2 * M_PI * s2);
+    float z = sqrtf(m_sphere->radius * m_sphere->radius - x * x - y * y) * sinf(M_PI * (s3 - .5f));
 
     RandomValue<glm::vec3> result;
-    result.value = glm::normalize(u * cosf(phi) * sin_a + v * sinf(phi) * sin_a + w * cos_a);
-    result.probability = 1 / ((1 - cos_a_max) * (2 * M_PI));
+    result.value = glm::normalize(lightPos + glm::vec3(x, y, z) - m_surfacePoint->position);
+    result.probability = 1 / solidAngle(lightPos);
     return result;
 }
 
@@ -47,11 +58,5 @@ glm::vec4 SphericalLight::evaluateSample(const glm::vec3& direction) const
 float SphericalLight::sampleProbability(const glm::vec3& direction) const
 {
     glm::vec3 lightPos(m_sphere->transform * glm::vec4(0, 0, 0, 1));
-    glm::vec3 w = lightPos - m_surfacePoint->position;
-    float cos_a_max = sqrtf(1 - m_sphere->radius * m_sphere->radius / glm::dot(w, w));
-    float cos_a = glm::dot(direction, glm::normalize(w));
-
-    if (cos_a < cos_a_max)
-        return 0;
-    return 1.f / ((1 - cos_a_max) * (2 * M_PI));
+    return 1 / solidAngle(lightPos);
 }

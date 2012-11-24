@@ -36,12 +36,9 @@ void buildTestScene(scene::Scene& scene)
         sphere.material.diffuse = colors[i % 4];
         if (i % 4 == 1)
             sphere.material.specularExponent = 20;
-        if (i % 4 == 3)
-            sphere.material.reflectivity = 1.f;
         if (i % 4 == 0)
         {
-            sphere.material.transparency = 0.9f;
-            sphere.material.reflectivity = 0.2f;
+            sphere.material.transparency = glm::vec4(0.9f);
             sphere.material.refractiveIndex = 1.5f;
         }
         sphere.transform = glm::translate(sphere.transform, glm::vec3(i * 3 - 2, 0, i * .5f));
@@ -58,8 +55,6 @@ void buildTestScene(scene::Scene& scene)
     ground.transform = glm::translate(ground.transform, glm::vec3(0, 1, 0));
     ground.material.diffuse = glm::vec4(.4f, .4f, .4f, 1);
     ground.material.ambient = ground.material.diffuse * 0.05f;
-    ground.material.reflectivity = 0.5f * 0;
-    ground.material.checkerboard = true;
     scene.planes.push_back(ground);
 
     Plane wall;

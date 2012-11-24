@@ -9,9 +9,6 @@ Scene::Scene()
 
 Material::Material():
     specularExponent(0),
-    reflectivity(0),
-    transparency(0),
-    refractiveIndex(1),
-    checkerboard(false)
+    refractiveIndex(1)
 {
 };

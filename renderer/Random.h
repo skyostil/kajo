@@ -52,7 +52,7 @@ public:
     RandomValue<glm::vec3> generateCosineHemispherical(const glm::vec3& normal, const glm::vec3& tangent, const glm::vec3& binormal);
     RandomValue<glm::vec3> generatePhong(const glm::vec3& normal, float exponent);
 
-    RandomValue<bool> russianRoulette(float probability);
+    RandomValue<bool> flipCoin(float probability);
     RandomValue<bool> russianRoulette(const glm::vec4& probability);
 
 private:

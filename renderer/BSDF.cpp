@@ -60,16 +60,14 @@ glm::vec4 PhongBSDF::evaluateSample(const glm::vec3& direction) const
 {
     glm::vec3 reflection = glm::reflect(m_surfacePoint->view, m_surfacePoint->normal);
     float cos_a = std::max(0.f, glm::dot(reflection, direction));
-    float sin_a = sqrtf(std::max(0.f, 1 - cos_a * cos_a));
-    return (m_exponent + 1) / (2 * M_PI) * m_color * powf(cos_a, m_exponent) * sin_a;
+    return (m_exponent + 1) / (2 * M_PI) * m_color * powf(cos_a, m_exponent);
 }
 
 float PhongBSDF::sampleProbability(const glm::vec3& direction) const
 {
     glm::vec3 reflection = glm::reflect(m_surfacePoint->view, m_surfacePoint->normal);
     float cos_a = std::max(0.f, glm::dot(reflection, direction));
-    float sin_a = sqrtf(std::max(0.f, 1 - cos_a * cos_a));
-    return (m_exponent + 1) / (2 * M_PI) * powf(cos_a, m_exponent) * sin_a;
+    return (m_exponent + 1) / (2 * M_PI) * powf(cos_a, m_exponent);
 }
 
 IdealReflectorBSDF::IdealReflectorBSDF(const SurfacePoint* surfacePoint, const glm::vec4& color):
@@ -85,7 +83,8 @@ RandomValue<glm::vec3> IdealReflectorBSDF::generateSample(Random& random) const
 
 glm::vec4 IdealReflectorBSDF::evaluateSample(const glm::vec3& direction) const
 {
-    return m_color;
+    float cos_a = std::max(0.f, glm::dot(direction, m_surfacePoint->normal));
+    return m_color / cos_a;
 }
 
 float IdealReflectorBSDF::sampleProbability(const glm::vec3& direction) const

@@ -168,15 +168,33 @@ void render(Image& image, scene::Scene& scene)
 int main(int argc, char** argv)
 {
     scene::Scene scene;
+    std::vector<std::string> args(&argv[0], &argv[argc]);
+
+    int width = 640;
+    int height = 480;
+    for (size_t i = 1; i < args.size() - 1; i++) {
+        bool hasMoreArgs = i < args.size() - 2;
+        if (args[i] == "--help") {
+            printf("Usage: %s OPTIONS SCENE\n\n"
+                   "Options:\n"
+                   "    -w N    Image width (640)\n"
+                   "    -h N    Image height (480)\n", args[0].c_str());
+            return 1;
+        } else if (args[i] == "-w" && hasMoreArgs) {
+            width = atoi(args[++i].c_str());
+        } else if (args[i] == "-h" && hasMoreArgs) {
+            height = atoi(args[++i].c_str());
+        }
+    }
 
     if (argc == 1)
         buildTestScene(scene);
-    else if (!scene::Parser::load(scene, argv[1])) {
-        std::cerr << "Failed to parse scene from " << argv[1] << std::endl;
+    else if (!scene::Parser::load(scene, args[args.size() - 1])) {
+        std::cerr << "Failed to parse scene from " << args[args.size() - 1] << std::endl;
         return 1;
     }
 
-    Image image(640, 480);
+    Image image(width, height);
     render(image, scene);
     image.save("out.png");
 }

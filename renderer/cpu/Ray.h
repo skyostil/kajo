@@ -1,6 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef RAY_H
-#define RAY_H
+#ifndef CPU_RAY_H
+#define CPU_RAY_H
 
 #include <glm/glm.hpp>
 #include <cstdint>

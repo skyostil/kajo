@@ -1,8 +1,8 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef SHADER_H
-#define SHADER_H
+#ifndef CPU_SHADER_H
+#define CPU_SHADER_H
 
-#include "PrecalculatedScene.h"
+#include "Scene.h"
 #include "Random.h"
 #include "Ray.h"
 
@@ -41,12 +41,10 @@ private:
 
     template <typename ObjectType>
     glm::vec4 sampleLights(const std::vector<ObjectType>& lights,
-                           const TransformDataList& transformDataList,
                            const SurfacePoint&, const BSDF&, Random&) const;
 
     template <typename ObjectType>
     float calculateLightProbabilities(const std::vector<ObjectType>& lights,
-                                      const TransformDataList& transformDataList,
                                       const SurfacePoint&, const glm::vec3& direction) const;
 
     Scene* m_scene;

@@ -1,10 +1,10 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef LIGHT_H
-#define LIGHT_H
+#ifndef CPU_LIGHT_H
+#define CPU_LIGHT_H
 
 #include <glm/glm.hpp>
 
-#include "PrecalculatedScene.h"
+#include "Scene.h"
 
 namespace cpu
 {
@@ -13,7 +13,6 @@ class Sphere;
 class Random;
 class Raytracer;
 class SurfacePoint;
-class TransformData;
 
 template <typename T> class RandomValue;
 
@@ -34,7 +33,7 @@ protected:
 class SphericalLight: public Light
 {
 public:
-    SphericalLight(const SurfacePoint*, const Raytracer*, const Sphere*, const TransformData*, const glm::vec4& emission);
+    SphericalLight(const SurfacePoint*, const Raytracer*, const Sphere*, const glm::vec4& emission);
 
     RandomValue<glm::vec3> generateSample(Random& random) const override;
     glm::vec4 evaluateSample(const glm::vec3& direction) const override;
@@ -44,7 +43,6 @@ private:
     float solidAngle(const glm::vec3& lightPos) const;
 
     const Sphere* m_sphere;
-    const TransformData* m_transformData;
     glm::vec4 m_emission;
 };
 

@@ -1,8 +1,8 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef RAYTRACER_H
-#define RAYTRACER_H
+#ifndef CPU_RAYTRACER_H
+#define CPU_RAYTRACER_H
 
-#include "PrecalculatedScene.h"
+#include "Scene.h"
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -29,15 +29,12 @@ public:
     SurfacePoint trace(Ray&) const;
     bool canReach(Ray&, intptr_t objectId) const;
 
-    const PrecalculatedScene& precalculatedScene() const;
-
-    void intersect(Ray&, SurfacePoint&, const Sphere&, const TransformData&) const;
-    void intersect(Ray&, SurfacePoint&, const Plane&, const TransformData&) const;
+    void intersect(Ray&, SurfacePoint&, const Sphere&) const;
+    void intersect(Ray&, SurfacePoint&, const Plane&) const;
 
 private:
     template <typename ObjectType>
     void intersectAll(const std::vector<ObjectType>& objects,
-                      const TransformDataList& transformDataList,
                       Ray&, SurfacePoint&) const;
 
     void processIntersection(Ray&, SurfacePoint&, float t, intptr_t objectId,
@@ -46,7 +43,6 @@ private:
                              const Material* material) const;
 
     Scene* m_scene;
-    std::unique_ptr<PrecalculatedScene> m_precalcScene;
 };
 
 }

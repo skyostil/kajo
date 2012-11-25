@@ -13,7 +13,7 @@
 
 using namespace cpu;
 
-Renderer::Renderer(::scene::Scene* scene):
+Renderer::Renderer(Scene* scene):
     m_scene(scene),
     m_raytracer(new Raytracer(scene)),
     m_shader(new Shader(scene, m_raytracer.get())),

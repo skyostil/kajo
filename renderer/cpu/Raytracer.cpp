@@ -14,21 +14,15 @@
 using namespace cpu;
 
 Raytracer::Raytracer(Scene* scene):
-    m_scene(scene),
-    m_precalcScene(new PrecalculatedScene(scene))
+    m_scene(scene)
 {
 }
 
-const PrecalculatedScene& Raytracer::precalculatedScene() const
-{
-    return *m_precalcScene.get();
-}
-
-void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Sphere& sphere, const TransformData& data) const
+void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Sphere& sphere) const
 {
     // From http://wiki.cgsociety.org/index.php/Ray_Sphere_Intersection
-    glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
-    glm::vec3 origin = ((data.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
+    glm::vec3 dir = glm::mat3(sphere.transform.invMatrix) * ray.direction;
+    glm::vec3 origin = ((sphere.transform.invMatrix * glm::vec4(ray.origin, 1.f))).xyz();
     float a = glm::dot(dir, dir);
     float b = 2 * glm::dot(dir, origin);
     float c = glm::dot(origin, origin) - sphere.radius * sphere.radius;
@@ -56,7 +50,7 @@ void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Sphere& sp
         t0 = t1;
 
     glm::vec3 normal = origin + dir * t0;
-    normal = glm::normalize(glm::mat3(sphere.transform) * normal);
+    normal = glm::normalize(glm::mat3(sphere.transform.matrix) * normal);
     intptr_t objectId = reinterpret_cast<intptr_t>(&sphere);
 #if 1
     glm::vec3 tangent;
@@ -73,14 +67,14 @@ void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Sphere& sp
 #endif
     glm::vec3 binormal = glm::cross(normal, tangent);
 
-    processIntersection(ray, surfacePoint, t0 * data.determinant, objectId, normal,
+    processIntersection(ray, surfacePoint, t0 * sphere.transform.determinant, objectId, normal,
                         tangent, binormal, &sphere.material);
 }
 
-void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Plane& plane, const TransformData& data) const
+void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Plane& plane) const
 {
-    glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
-    glm::vec3 origin = ((data.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
+    glm::vec3 dir = glm::mat3(plane.transform.invMatrix) * ray.direction;
+    glm::vec3 origin = ((plane.transform.invMatrix * glm::vec4(ray.origin, 1.f))).xyz();
     glm::vec3 normal(0, 1, 0);
 
     float denom = glm::dot(dir, normal);
@@ -93,25 +87,22 @@ void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Plane& pla
     if (t < 0)
         return;
 
-    normal = glm::mat3(plane.transform) * -normal;
-    glm::vec3 tangent = glm::mat3(plane.transform) * glm::vec3(1, 0, 0);
+    normal = glm::mat3(plane.transform.matrix) * -normal;
+    glm::vec3 tangent = glm::mat3(plane.transform.matrix) * glm::vec3(1, 0, 0);
     glm::vec3 binormal = glm::cross(normal, tangent);
 
     intptr_t objectId = reinterpret_cast<intptr_t>(&plane);
 
-    processIntersection(ray, surfacePoint, t * data.determinant, objectId, normal,
+    processIntersection(ray, surfacePoint, t * plane.transform.determinant, objectId, normal,
                         tangent, binormal, &plane.material);
 }
 
 template <typename ObjectType>
 void Raytracer::intersectAll(const std::vector<ObjectType>& objects,
-                            const TransformDataList& transformDataList,
                             Ray& ray, SurfacePoint& surfacePoint) const
 {
-    std::for_each(objects.begin(), objects.end(), [&](const ObjectType& object){
-        size_t i = &object - &objects[0];
-        intersect(ray, surfacePoint, object, transformDataList[i]);
-    });
+    for (const ObjectType& object: objects)
+        intersect(ray, surfacePoint, object);
 }
 
 void Raytracer::processIntersection(Ray& ray, SurfacePoint& surfacePoint,
@@ -137,8 +128,8 @@ SurfacePoint Raytracer::trace(Ray& ray) const
     SurfacePoint surfacePoint;
     surfacePoint.view = ray.direction;
 
-    intersectAll(m_scene->planes, m_precalcScene->planeTransforms, ray, surfacePoint);
-    intersectAll(m_scene->spheres, m_precalcScene->sphereTransforms, ray, surfacePoint);
+    intersectAll(m_scene->planes, ray, surfacePoint);
+    intersectAll(m_scene->spheres, ray, surfacePoint);
 
     if (surfacePoint.valid())
         surfacePoint.position = ray.origin + ray.direction * ray.maxDistance;

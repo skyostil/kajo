@@ -9,7 +9,7 @@
 #include "Raytracer.h"
 #include "Shader.h"
 #include "SurfacePoint.h"
-#include "PrecalculatedScene.h"
+#include "Scene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
@@ -39,9 +39,8 @@ template <>
 class LightSampler<Sphere>
 {
 public:
-    LightSampler(const SurfacePoint* surfacePoint, const Raytracer* raytracer, const Sphere* sphere,
-                 const TransformData* transformData):
-        light(surfacePoint, raytracer, sphere, transformData, sphere->material.emission)
+    LightSampler(const SurfacePoint* surfacePoint, const Raytracer* raytracer, const Sphere* sphere):
+        light(surfacePoint, raytracer, sphere, sphere->material.emission)
     {
     }
 
@@ -50,22 +49,20 @@ public:
 
 template <typename ObjectType>
 glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
-                               const TransformDataList& transformDataList,
                                const SurfacePoint& surfacePoint, const BSDF& bsdf,
                                Random& random) const
 {
     glm::vec4 radiance;
-    std::for_each(objects.begin(), objects.end(), [&](const ObjectType& object) {
+    for (const ObjectType& object: objects) {
         if (object.material.emission == glm::vec4(0))
-            return;
+            continue;
         if (reinterpret_cast<intptr_t>(&object) == surfacePoint.objectId)
-            return;
-        size_t i = &object - &objects[0];
+            continue;
 
-        LightSampler<ObjectType> sampler(&surfacePoint, m_raytracer, &object, &transformDataList[i]);
+        LightSampler<ObjectType> sampler(&surfacePoint, m_raytracer, &object);
         RandomValue<glm::vec3> lightDirection = sampler.light.generateSample(random);
         if (!lightDirection.probability)
-            return;
+            continue;
 
         // Check for visibility
         Ray shadowRay;
@@ -73,33 +70,31 @@ glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
         shadowRay.origin = surfacePoint.position + shadowRay.direction * g_surfaceEpsilon;
         //shadowRay.maxDistance = glm::length(samplePos - surfacePoint.position); // FIXME
         if (!m_raytracer->canReach(shadowRay, reinterpret_cast<intptr_t>(&object)))
-            return;
+            continue;
 
         // Calculate BSDF probability in the light direction
         float bsdfProbability = bsdf.sampleProbability(lightDirection.value);
         if (!bsdfProbability)
-            return;
+            continue;
 
         radiance += 1 / (bsdfProbability + lightDirection.probability) *
                     bsdf.evaluateSample(lightDirection.value) *
                     std::max(0.f, glm::dot(surfacePoint.normal, lightDirection.value)) *
                     sampler.light.evaluateSample(lightDirection.value);
-    });
+    }
     return radiance;
 }
 
 template <typename ObjectType>
 float Shader::calculateLightProbabilities(const std::vector<ObjectType>& objects,
-                                          const TransformDataList& transformDataList,
                                           const SurfacePoint& surfacePoint, const glm::vec3& direction) const
 {
     float totalPdf = 0;
-    std::for_each(objects.begin(), objects.end(), [&](const ObjectType& object) {
+    for (const ObjectType& object: objects) {
         if (object.material.emission == glm::vec4(0))
-            return;
+            continue;
         if (reinterpret_cast<intptr_t>(&object) == surfacePoint.objectId)
-            return;
-        size_t i = &object - &objects[0];
+            continue;
 
         // Check for visibility
         Ray shadowRay;
@@ -107,11 +102,11 @@ float Shader::calculateLightProbabilities(const std::vector<ObjectType>& objects
         shadowRay.origin = surfacePoint.position + shadowRay.direction * g_surfaceEpsilon;
         //shadowRay.maxDistance = glm::length(samplePos - surfacePoint.position); // FIXME
         if (!m_raytracer->canReach(shadowRay, reinterpret_cast<intptr_t>(&object)))
-            return;
+            continue;
 
-        LightSampler<ObjectType> sampler(&surfacePoint, m_raytracer, &object, &transformDataList[i]);
+        LightSampler<ObjectType> sampler(&surfacePoint, m_raytracer, &object);
         totalPdf += sampler.light.sampleProbability(direction);
-    });
+    }
     return totalPdf;
 }
 
@@ -196,7 +191,7 @@ glm::vec4 Shader::shadeWithBSDF(const BSDF& bsdf, const SurfacePoint& surfacePoi
 
     // Sample all lights
     if (directLighting)
-        radiance += sampleLights(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
+        radiance += sampleLights(m_scene->spheres,
                                  surfacePoint, bsdf, random);
 
     // Generate new ray direction based on BSDF
@@ -212,7 +207,7 @@ glm::vec4 Shader::shadeWithBSDF(const BSDF& bsdf, const SurfacePoint& surfacePoi
 
     // Calculate light probabilities in the BSDF direction
     float lightProbability =
-        directLighting ? calculateLightProbabilities(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
+        directLighting ? calculateLightProbabilities(m_scene->spheres,
                                                      surfacePoint, bsdfDirection.value) : 0;
 
     // Evaluate BSDF

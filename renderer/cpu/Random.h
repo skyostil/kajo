@@ -1,6 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef RANDOM_H
-#define RANDOM_H
+#ifndef CPU_RANDOM_H
+#define CPU_RANDOM_H
 
 #include <glm/glm.hpp>
 #include "renderer/Util.h"

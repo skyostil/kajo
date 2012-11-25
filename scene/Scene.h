@@ -26,7 +26,6 @@ class Sphere
 {
 public:
     glm::mat4 transform;
-    glm::mat4 invTransform;
     Material material;
     float radius;
 };
@@ -35,7 +34,6 @@ class Plane
 {
 public:
     glm::mat4 transform;
-    glm::mat4 invTransform;
     Material material;
 };
 

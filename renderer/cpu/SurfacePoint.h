@@ -1,6 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef SURFACEPOINT_H
-#define SURFACEPOINT_H
+#ifndef CPU_SURFACEPOINT_H
+#define CPU_SURFACEPOINT_H
 
 #include <glm/glm.hpp>
 #include <cstdint>

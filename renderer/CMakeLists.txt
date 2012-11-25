@@ -17,8 +17,6 @@ add_executable(
     cpu/BSDF.h
     cpu/Light.cpp
     cpu/Light.h
-    cpu/PrecalculatedScene.cpp
-    cpu/PrecalculatedScene.h
     cpu/Random.cpp
     cpu/Random.h
     cpu/Ray.cpp
@@ -27,6 +25,8 @@ add_executable(
     cpu/Raytracer.h
     cpu/Renderer.cpp
     cpu/Renderer.h
+    cpu/Scene.cpp
+    cpu/Scene.h
     cpu/Shader.cpp
     cpu/Shader.h
     cpu/SurfacePoint.cpp

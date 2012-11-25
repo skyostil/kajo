@@ -136,7 +136,7 @@ void joinTasks(RenderTasks& tasks)
 
 void render(Image& image, scene::Scene& scene)
 {
-    cpu::Renderer renderer(&scene);
+    cpu::Renderer renderer(new cpu::Scene(scene));
     std::unique_ptr<Preview> preview(Preview::create(&image));
     bool done = false;
 
@@ -165,7 +165,6 @@ void render(Image& image, scene::Scene& scene)
 
 int main(int argc, char** argv)
 {
-    scene::Scene scene;
     std::vector<std::string> args(&argv[0], &argv[argc]);
 
     int width = 640;
@@ -185,6 +184,7 @@ int main(int argc, char** argv)
         }
     }
 
+    scene::Scene scene;
     if (argc == 1)
         buildTestScene(scene);
     else if (!scene::Parser::load(scene, args[args.size() - 1])) {

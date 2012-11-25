@@ -1,6 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef BSDF_H
-#define BSDF_H
+#ifndef CPU_BSDF_H
+#define CPU_BSDF_H
 
 #include <glm/glm.hpp>
 

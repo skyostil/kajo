@@ -1,6 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef RENDERER_H
-#define RENDERER_H
+#ifndef CPU_RENDERER_H
+#define CPU_RENDERER_H
 
 #include <memory>
 

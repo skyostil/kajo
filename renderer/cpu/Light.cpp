@@ -16,11 +16,9 @@ Light::Light(const SurfacePoint* surfacePoint, const Raytracer* raytracer):
 }
 
 SphericalLight::SphericalLight(const SurfacePoint* surfacePoint, const Raytracer* raytracer,
-                               const Sphere* sphere,
-                               const TransformData* transformData, const glm::vec4& emission):
+                               const Sphere* sphere, const glm::vec4& emission):
     Light(surfacePoint, raytracer),
     m_sphere(sphere),
-    m_transformData(transformData),
     m_emission(emission)
 {
 }
@@ -36,7 +34,7 @@ float SphericalLight::solidAngle(const glm::vec3& lightPos) const
 RandomValue<glm::vec3> SphericalLight::generateSample(Random& random) const
 {
     // From "Lightcuts: A Scalable Approach to Illumination"
-    glm::vec3 lightPos(m_sphere->transform * glm::vec4(0, 0, 0, 1));
+    glm::vec3 lightPos(m_sphere->transform.matrix * glm::vec4(0, 0, 0, 1));
     glm::vec4 randomSample = random.generate();
     float s1 = (randomSample.x * .5f) + .5f;
     float s2 = (randomSample.y * .5f) + .5f;
@@ -59,6 +57,6 @@ glm::vec4 SphericalLight::evaluateSample(const glm::vec3& direction) const
 
 float SphericalLight::sampleProbability(const glm::vec3& direction) const
 {
-    glm::vec3 lightPos(m_sphere->transform * glm::vec4(0, 0, 0, 1));
+    glm::vec3 lightPos(m_sphere->transform.matrix * glm::vec4(0, 0, 0, 1));
     return 1 / solidAngle(lightPos);
 }

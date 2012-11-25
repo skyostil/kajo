@@ -2,7 +2,6 @@
 #ifndef CPU_RENDERER_H
 #define CPU_RENDERER_H
 
-#include "renderer/Renderer.h"
 #include "Raytracer.h"
 #include "Shader.h"
 
@@ -16,13 +15,15 @@ class Scene;
 namespace cpu
 {
 
-class Renderer: public ::Renderer
+typedef std::function<bool(int pass, int samples, int xOffset, int yOffset, int width, int height)> RenderObserver;
+
+class Renderer
 {
 public:
     Renderer(const scene::Scene& scene);
 
-    virtual void setObserver(RenderObserver observer) override;
-    virtual void render(Image& image, int xOffset, int yOffset, int width, int height) const override;
+    void setObserver(RenderObserver observer);
+    void render(Image& image, int xOffset, int yOffset, int width, int height) const;
 
 private:
     std::unique_ptr<Scene> m_scene;

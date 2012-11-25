@@ -9,6 +9,7 @@ add_executable(
     Main.cpp
     Preview.cpp
     Preview.h
+    Scheduler.h
     Util.cpp
     Util.h
 
@@ -17,6 +18,7 @@ add_executable(
     cpu/BSDF.h
     cpu/Light.cpp
     cpu/Light.h
+    cpu/Queue.h
     cpu/Random.cpp
     cpu/Random.h
     cpu/Ray.cpp
@@ -27,10 +29,16 @@ add_executable(
     cpu/Renderer.h
     cpu/Scene.cpp
     cpu/Scene.h
+    cpu/Scheduler.cpp
+    cpu/Scheduler.h
     cpu/Shader.cpp
     cpu/Shader.h
     cpu/SurfacePoint.cpp
     cpu/SurfacePoint.h
+
+    # OpenGL renderer
+    gl/Renderer.cpp
+    gl/Renderer.h
 )
 
 target_link_libraries(

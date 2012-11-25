@@ -1,19 +1,13 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#include "Renderer.h"
-#include "cpu/Renderer.h"
+#include "Scheduler.h"
+#include "cpu/Scheduler.h"
 #include "scene/Parser.h"
 #include "scene/Scene.h"
 #include "Image.h"
 #include "Preview.h"
-#include "Queue.h"
 
-#include <algorithm>
-#include <fstream>
-#include <future>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
-#include <unistd.h>
-#include <vector>
 
 void buildTestScene(scene::Scene& scene)
 {
@@ -99,71 +93,6 @@ void buildTestScene(scene::Scene& scene)
     scene.backgroundColor = glm::vec4(.0f, .0f, .0f, 1);
 }
 
-int cpuCount()
-{
-    return sysconf(_SC_NPROCESSORS_ONLN);
-}
-
-struct RenderUpdate
-{
-    std::thread::id threadId;
-    int pass;
-    int samples;
-    int xOffset, yOffset, width, height;
-};
-
-typedef std::vector<std::future<void>> RenderTasks;
-
-void createTasks(Image& image, Renderer& renderer, RenderTasks& tasks)
-{
-    int slice = (image.height + 1) / cpuCount();
-    for (int y = 0; y < image.height; y += slice)
-    {
-        auto task = std::async(std::launch::async, [=, &renderer, &image] {
-            renderer.render(image, 0, y, image.width, slice);
-        });
-        tasks.push_back(std::move(task));
-    }
-}
-
-void joinTasks(RenderTasks& tasks)
-{
-    while (tasks.size())
-    {
-        tasks.back().wait();
-        tasks.pop_back();
-    }
-}
-
-void render(Image& image, scene::Scene& scene)
-{
-    std::unique_ptr<Renderer> renderer(new cpu::Renderer(scene));
-    std::unique_ptr<Preview> preview(Preview::create(&image));
-    bool done = false;
-
-    Queue<RenderUpdate> updateQueue;
-    renderer->setObserver([&updateQueue, &done] (int pass, int samples, int xOffset, int yOffset, int width, int height) {
-        std::thread::id threadId = std::this_thread::get_id();
-        updateQueue.push(RenderUpdate{threadId, pass, samples, xOffset, yOffset, width, height});
-        return !done;
-    });
-
-    RenderTasks tasks;
-    createTasks(image, *renderer, tasks);
-
-    while (preview->processEvents())
-    {
-        RenderUpdate update;
-        if (updateQueue.pop(update, std::chrono::milliseconds(500)))
-            preview->update(update.threadId, update.pass, update.samples,
-                            update.xOffset, update.yOffset,
-                            update.width, update.height);
-    }
-
-    done = true;
-    joinTasks(tasks);
-}
-
 int main(int argc, char** argv)
 {
     std::vector<std::string> args(&argv[0], &argv[argc]);
@@ -193,7 +122,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Image image(width, height);
-    render(image, scene);
-    image.save("out.png");
+    std::unique_ptr<Image> image(new Image(width, height));
+    std::unique_ptr<Preview> preview(Preview::create(image.get()));
+    std::unique_ptr<Scheduler> scheduler(new cpu::Scheduler(scene, image.get(), preview.get()));
+    scheduler->run();
+    image->save("out.png");
 }

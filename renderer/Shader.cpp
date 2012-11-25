@@ -27,16 +27,23 @@ Shader::Shader(scene::Scene* scene, Raytracer* raytracer):
 {
 }
 
-// TODO: No heap allocation!
 template <typename ObjectType>
-Light* createLight(const SurfacePoint*, const Raytracer*, const ObjectType*, const TransformData*);
+class LightSampler
+{
+};
 
 template <>
-Light* createLight(const SurfacePoint* surfacePoint, const Raytracer* raytracer, const scene::Sphere* sphere,
-                   const TransformData* transformData)
+class LightSampler<scene::Sphere>
 {
-    return new SphericalLight(surfacePoint, raytracer, sphere, transformData, sphere->material.emission);
-}
+public:
+    LightSampler(const SurfacePoint* surfacePoint, const Raytracer* raytracer, const scene::Sphere* sphere,
+                 const TransformData* transformData):
+        light(surfacePoint, raytracer, sphere, transformData, sphere->material.emission)
+    {
+    }
+
+    SphericalLight light;
+};
 
 template <typename ObjectType>
 glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
@@ -51,10 +58,9 @@ glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
         if (reinterpret_cast<intptr_t>(&object) == surfacePoint.objectId)
             return;
         size_t i = &object - &objects[0];
-        std::unique_ptr<Light> light(createLight(&surfacePoint, m_raytracer, &object, &transformDataList[i]));
 
-        // Generate a direction toward the light
-        RandomValue<glm::vec3> lightDirection = light->generateSample(random);
+        LightSampler<ObjectType> sampler(&surfacePoint, m_raytracer, &object, &transformDataList[i]);
+        RandomValue<glm::vec3> lightDirection = sampler.light.generateSample(random);
         if (!lightDirection.probability)
             return;
 
@@ -71,11 +77,10 @@ glm::vec4 Shader::sampleLights(const std::vector<ObjectType>& objects,
         if (!bsdfProbability)
             return;
 
-        radiance +=
-                1 / (bsdfProbability + lightDirection.probability) *
-                bsdf.evaluateSample(lightDirection.value) *
-                std::max(0.f, glm::dot(surfacePoint.normal, lightDirection.value)) *
-                light->evaluateSample(lightDirection.value);
+        radiance += 1 / (bsdfProbability + lightDirection.probability) *
+                    bsdf.evaluateSample(lightDirection.value) *
+                    std::max(0.f, glm::dot(surfacePoint.normal, lightDirection.value)) *
+                    sampler.light.evaluateSample(lightDirection.value);
     });
     return radiance;
 }
@@ -92,7 +97,6 @@ float Shader::calculateLightProbabilities(const std::vector<ObjectType>& objects
         if (reinterpret_cast<intptr_t>(&object) == surfacePoint.objectId)
             return;
         size_t i = &object - &objects[0];
-        std::unique_ptr<Light> light(createLight(&surfacePoint, m_raytracer, &object, &transformDataList[i]));
 
         // Check for visibility
         Ray shadowRay;
@@ -102,7 +106,8 @@ float Shader::calculateLightProbabilities(const std::vector<ObjectType>& objects
         if (!m_raytracer->canReach(shadowRay, reinterpret_cast<intptr_t>(&object)))
             return;
 
-        totalPdf += light->sampleProbability(direction);
+        LightSampler<ObjectType> sampler(&surfacePoint, m_raytracer, &object, &transformDataList[i]);
+        totalPdf += sampler.light.sampleProbability(direction);
     });
     return totalPdf;
 }
@@ -178,164 +183,6 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
            1 / transparentSample.probability *
            1 / diffuseSample.probability *
            (radiance + shadeWithBSDF(bsdf, surfacePoint, random, depth, lightSamplingScheme));
-#if 0
-    // If we are only sampling indirect lighting, skip emissive objects. This
-    // is done to avoid oversampling emissive objects.
-    if (lightSamplingScheme == SampleNonEmissiveObjects && (color.x || color.y || color.z))
-        return glm::vec4();
-
-    // Terminate path with Russian roulette
-    float invTerminationProbability = russianRoulette(random, material->diffuse);
-    if (!invTerminationProbability || depth >= g_depthLimit)
-        return color;
-
-    /*
-    glm::vec3 direction = surfacePoint.normal;
-    color += glm::vec4(1.f) * fabs(pdfForObjects(m_scene->spheres,
-             m_raytracer->precalculatedScene().sphereTransforms, surfacePoint,
-             direction)) + glm::vec4(surfacePoint.normal.xyzx);*/
-
-    // Sample lights
-    color += invTerminationProbability *
-        sampleLights(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms, surfacePoint, random);
-
-    // Sample BSDF
-    // TODO: EvaluateBSDF + recursion
-    color += invTerminationProbability * sampleBSDF(surfacePoint, random, depth);
-
-    // FIXME: Is this correct?
-    //color /= 2;
-
-    return color;
-#endif
-
-#if 0
-    glm::vec3 dir = ray.random.generateSpherical();
-    if (glm::dot(dir, ray.normal) <= 0)
-        dir = -dir;
-
-    Ray reflectedRay(ray.random);
-    reflectedRay.direction = dir;
-    reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
-
-    if (m_raytracer->trace(reflectedRay))
-        color += ray.material->diffuse * shade(reflectedRay, false, depth + 1);
-
-    return color;
-#endif
-
-#if 0
-    bool exitingMaterial = (glm::dot(ray.direction, ray.normal) >= 0);
-
-    //if (!indirectLightOnly)
-        color = ray.material->emission;
-
-    if (depth >= m_depthLimit)
-        return glm::vec4(0);
-
-#if 0
-    if (!exitingMaterial)
-    {
-        glm::vec4 incomingRadiance;
-        applyAllEmissiveObjects(m_scene->spheres, m_raytracer->precalculatedScene().sphereTransforms,
-                                ray, incomingRadiance);
-        color += incomingRadiance * ray.material->diffuse;
-    }
-    else
-        color = glm::vec4(0);
-#endif
-
-    if (ray.material->checkerboard)
-    {
-        if ((fmod(fmod(ray.hitPos.x, 1) + 1, 1) < 0.5f) ^ (fmod(fmod(ray.hitPos.z, 1) + 1, 1) < .5f))
-            color *= .5f;
-    }
-
-    float pEmit = (glm::dot(color, color) > .01f) ? .9f : 0.f;
-
-    glm::vec4 r = ray.random.generate();
-    r.x = .5f * r.x + .5f;
-    if (r.x < pEmit)
-    {
-        // Emitted
-        return 1.f / pEmit * color;
-    }
-    else
-    {
-        // Reflected
-#if 0
-        glm::vec3 dir = ray.random.generateCosineHemisphere();
-        dir = ray.normal * dir.z + ray.tangent * dir.x + ray.binormal * dir.y;
-#else
-        glm::vec3 dir = ray.random.generateSpherical();
-        if (glm::dot(dir, ray.normal) <= 0)
-            dir = -dir;
-#endif
-        Ray reflectedRay(ray.random);
-        reflectedRay.direction = dir;
-        reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
-
-        color = glm::vec4(0);
-        if (m_raytracer->trace(reflectedRay))
-            color += ray.material->diffuse * 1.f / (1 - pEmit) * shade(reflectedRay, false, depth + 1);
-        //dump(color);
-        return color;
-    }
-
-#if 0
-    // Refraction
-    if (ray.material->transparency)
-    {
-        // Intersecting transparent objects not supported
-        float eta = 1.f / ray.material->refractiveIndex;
-        glm::vec3 normal = ray.normal;
-        if (exitingMaterial)
-        {
-            // Leaving the material
-            eta = 1.f / eta;
-            normal = -normal;
-        }
-        Ray refractedRay(ray.random);
-        refractedRay.direction = glm::normalize(glm::refract(ray.direction, normal, eta));
-        refractedRay.origin = ray.hitPos + refractedRay.direction * g_surfaceEpsilon;
-
-        if (m_raytracer->trace(refractedRay))
-            color += shade(refractedRay, false, depth + 1) *
-                     ray.material->transparency * ray.material->diffuse;
-    }
-
-    // Diffuse reflection
-    if (!exitingMaterial)
-    {
-        glm::vec3 dir = ray.random.generateCosineHemisphere();
-        dir = ray.normal * dir.z + ray.tangent * dir.x + ray.binormal * dir.y;
-
-        Ray reflectedRay(ray.random);
-        reflectedRay.direction = dir;
-        reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
-
-        if (m_raytracer->trace(reflectedRay))
-            color += shade(reflectedRay, true, depth + 1) * ray.material->diffuse;
-    }
-
-    // Specular reflection
-    if (ray.material->reflectivity && !exitingMaterial)
-    {
-        Ray reflectedRay(ray.random);
-        reflectedRay.direction = glm::reflect(ray.direction, ray.normal);
-        reflectedRay.origin = ray.hitPos + reflectedRay.direction * g_surfaceEpsilon;
-
-        if (m_raytracer->trace(reflectedRay))
-            color += shade(reflectedRay, false, depth + 1) * ray.material->reflectivity;
-    }
-
-    //color = ray.material->color;
-    //color = glm::vec4(-ray.normal, 1.f);
-    //color = glm::vec4(ray.tangent, 1.f);
-    //color = glm::vec4(-ray.binormal, 1.f);
-    return color;
-#endif
-#endif
 }
 
 glm::vec4 Shader::shadeWithBSDF(const BSDF& bsdf, const SurfacePoint& surfacePoint, Random& random,

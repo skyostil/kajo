@@ -4,7 +4,9 @@
 
 #include <algorithm>
 
-PrecalculatedScene::PrecalculatedScene(scene::Scene* scene):
+using namespace cpu;
+
+PrecalculatedScene::PrecalculatedScene(Scene* scene):
     m_scene(scene)
 {
     prepare();

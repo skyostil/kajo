@@ -1,17 +1,19 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
+#include "renderer/Util.h"
 #include "scene/Scene.h"
 #include "Raytracer.h"
 #include "Ray.h"
 #include "SurfacePoint.h"
-#include "Util.h"
 
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
 #include <cmath>
 
-Raytracer::Raytracer(scene::Scene* scene):
+using namespace cpu;
+
+Raytracer::Raytracer(Scene* scene):
     m_scene(scene),
     m_precalcScene(new PrecalculatedScene(scene))
 {
@@ -22,7 +24,7 @@ const PrecalculatedScene& Raytracer::precalculatedScene() const
     return *m_precalcScene.get();
 }
 
-void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Sphere& sphere, const TransformData& data) const
+void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Sphere& sphere, const TransformData& data) const
 {
     // From http://wiki.cgsociety.org/index.php/Ray_Sphere_Intersection
     glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
@@ -75,7 +77,7 @@ void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Sph
                         tangent, binormal, &sphere.material);
 }
 
-void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const scene::Plane& plane, const TransformData& data) const
+void Raytracer::intersect(Ray& ray, SurfacePoint& surfacePoint, const Plane& plane, const TransformData& data) const
 {
     glm::vec3 dir = glm::mat3(data.invTransform) * ray.direction;
     glm::vec3 origin = ((data.invTransform * glm::vec4(ray.origin, 1.f))).xyz();
@@ -117,7 +119,7 @@ void Raytracer::processIntersection(Ray& ray, SurfacePoint& surfacePoint,
                                     const glm::vec3& normal,
                                     const glm::vec3& tangent,
                                     const glm::vec3& binormal,
-                                    const scene::Material* material) const
+                                    const Material* material) const
 {
     if (t > ray.maxDistance || t < ray.minDistance)
         return;

@@ -4,31 +4,33 @@ find_package(SDL_ttf)
 
 add_executable(
     renderer
-    BSDF.cpp
-    BSDF.h
     Image.cpp
     Image.h
-    Light.cpp
-    Light.h
     Main.cpp
-    PrecalculatedScene.cpp
-    PrecalculatedScene.h
     Preview.cpp
     Preview.h
-    Random.cpp
-    Random.h
-    Ray.cpp
-    Ray.h
-    Raytracer.cpp
-    Raytracer.h
-    Renderer.cpp
-    Renderer.h
-    Shader.cpp
-    Shader.h
-    SurfacePoint.cpp
-    SurfacePoint.h
     Util.cpp
     Util.h
+
+    # CPU renderer
+    cpu/BSDF.cpp
+    cpu/BSDF.h
+    cpu/Light.cpp
+    cpu/Light.h
+    cpu/PrecalculatedScene.cpp
+    cpu/PrecalculatedScene.h
+    cpu/Random.cpp
+    cpu/Random.h
+    cpu/Ray.cpp
+    cpu/Ray.h
+    cpu/Raytracer.cpp
+    cpu/Raytracer.h
+    cpu/Renderer.cpp
+    cpu/Renderer.h
+    cpu/Shader.cpp
+    cpu/Shader.h
+    cpu/SurfacePoint.cpp
+    cpu/SurfacePoint.h
 )
 
 target_link_libraries(

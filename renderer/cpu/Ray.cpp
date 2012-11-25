@@ -5,6 +5,8 @@
 
 #include <limits>
 
+using namespace cpu;
+
 Ray::Ray():
     minDistance(0),
     maxDistance(std::numeric_limits<float>::infinity())

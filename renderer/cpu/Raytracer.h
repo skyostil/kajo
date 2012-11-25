@@ -9,31 +9,30 @@
 #include <stdint.h>
 #include <vector>
 
+namespace cpu
+{
+
 class Ray;
 class Shader;
 class SurfacePoint;
-
-namespace scene
-{
-    class Material;
-    class Sphere;
-    class Plane;
-    class PointLight;
-    class Scene;
-}
+class Material;
+class Sphere;
+class Plane;
+class PointLight;
+class Scene;
 
 class Raytracer
 {
 public:
-    Raytracer(scene::Scene* scene);
+    Raytracer(Scene* scene);
 
     SurfacePoint trace(Ray&) const;
     bool canReach(Ray&, intptr_t objectId) const;
 
     const PrecalculatedScene& precalculatedScene() const;
 
-    void intersect(Ray&, SurfacePoint&, const scene::Sphere&, const TransformData&) const;
-    void intersect(Ray&, SurfacePoint&, const scene::Plane&, const TransformData&) const;
+    void intersect(Ray&, SurfacePoint&, const Sphere&, const TransformData&) const;
+    void intersect(Ray&, SurfacePoint&, const Plane&, const TransformData&) const;
 
 private:
     template <typename ObjectType>
@@ -44,10 +43,12 @@ private:
     void processIntersection(Ray&, SurfacePoint&, float t, intptr_t objectId,
                              const glm::vec3& normal, const glm::vec3& tangent,
                              const glm::vec3& binormal,
-                             const scene::Material* material) const;
+                             const Material* material) const;
 
-    scene::Scene* m_scene;
+    Scene* m_scene;
     std::unique_ptr<PrecalculatedScene> m_precalcScene;
 };
+
+}
 
 #endif

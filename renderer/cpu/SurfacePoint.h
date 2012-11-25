@@ -5,10 +5,10 @@
 #include <glm/glm.hpp>
 #include <cstdint>
 
-namespace scene
+namespace cpu
 {
-    class Material;
-}
+
+class Material;
 
 class SurfacePoint
 {
@@ -25,7 +25,9 @@ public:
     glm::vec3 normal;
     glm::vec3 tangent;
     glm::vec3 binormal;
-    const scene::Material* material;
+    const Material* material;
 };
+
+}
 
 #endif

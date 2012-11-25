@@ -2,6 +2,8 @@
 
 #include "SurfacePoint.h"
 
+using namespace cpu;
+
 SurfacePoint::SurfacePoint():
     objectId(0),
     material(0)

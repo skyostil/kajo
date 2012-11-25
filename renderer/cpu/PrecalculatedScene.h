@@ -5,10 +5,16 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-namespace scene
+#include "scene/Scene.h"
+
+namespace cpu
 {
-    class Scene;
-}
+
+using scene::Scene;
+using scene::Plane;
+using scene::Material;
+using scene::Sphere;
+using scene::Camera;
 
 class TransformData
 {
@@ -22,7 +28,7 @@ typedef std::vector<TransformData> TransformDataList;
 class PrecalculatedScene
 {
 public:
-    PrecalculatedScene(scene::Scene* scene);
+    PrecalculatedScene(Scene* scene);
 
     TransformDataList sphereTransforms;
     TransformDataList planeTransforms;
@@ -33,7 +39,9 @@ private:
     template <typename ObjectType>
     void prepareAll(std::vector<ObjectType>& objects, TransformDataList& transformDataList);
 
-    scene::Scene* m_scene;
+    Scene* m_scene;
 };
+
+}
 
 #endif

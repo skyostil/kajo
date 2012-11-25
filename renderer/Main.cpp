@@ -1,12 +1,10 @@
 // Copyright (C) 2012 Sami Kyöstilä
+#include "cpu/Renderer.h"
+#include "scene/Parser.h"
+#include "scene/Scene.h"
 #include "Image.h"
 #include "Preview.h"
 #include "Queue.h"
-#include "Raytracer.h"
-#include "Renderer.h"
-#include "Shader.h"
-#include "scene/Parser.h"
-#include "scene/Scene.h"
 
 #include <algorithm>
 #include <fstream>
@@ -115,7 +113,7 @@ struct RenderUpdate
 
 typedef std::vector<std::future<void>> RenderTasks;
 
-void createTasks(Image& image, Renderer& renderer, RenderTasks& tasks)
+void createTasks(Image& image, cpu::Renderer& renderer, RenderTasks& tasks)
 {
     int slice = (image.height + 1) / cpuCount();
     for (int y = 0; y < image.height; y += slice)
@@ -138,7 +136,7 @@ void joinTasks(RenderTasks& tasks)
 
 void render(Image& image, scene::Scene& scene)
 {
-    Renderer renderer(&scene);
+    cpu::Renderer renderer(&scene);
     std::unique_ptr<Preview> preview(Preview::create(&image));
     bool done = false;
 

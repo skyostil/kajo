@@ -7,6 +7,8 @@
 #include "SurfacePoint.h"
 #include "scene/Scene.h"
 
+using namespace cpu;
+
 Light::Light(const SurfacePoint* surfacePoint, const Raytracer* raytracer):
     m_surfacePoint(surfacePoint),
     m_raytracer(raytracer)
@@ -14,7 +16,7 @@ Light::Light(const SurfacePoint* surfacePoint, const Raytracer* raytracer):
 }
 
 SphericalLight::SphericalLight(const SurfacePoint* surfacePoint, const Raytracer* raytracer,
-                               const scene::Sphere* sphere,
+                               const Sphere* sphere,
                                const TransformData* transformData, const glm::vec4& emission):
     Light(surfacePoint, raytracer),
     m_sphere(sphere),

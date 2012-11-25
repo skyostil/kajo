@@ -5,6 +5,9 @@
 #include <glm/glm.hpp>
 #include <cstdint>
 
+namespace cpu
+{
+
 class Ray
 {
 public:
@@ -15,5 +18,7 @@ public:
     float minDistance; // Assumed to be >= 0
     float maxDistance;
 };
+
+}
 
 #endif

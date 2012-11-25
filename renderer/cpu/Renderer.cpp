@@ -1,17 +1,19 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
-#include "Image.h"
-#include "Renderer.h"
 #include "Random.h"
 #include "Ray.h"
 #include "Raytracer.h"
+#include "Renderer.h"
 #include "Shader.h"
 #include "SurfacePoint.h"
+#include "renderer/Image.h"
 #include "scene/Scene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
-Renderer::Renderer(scene::Scene* scene):
+using namespace cpu;
+
+Renderer::Renderer(::scene::Scene* scene):
     m_scene(scene),
     m_raytracer(new Raytracer(scene)),
     m_shader(new Shader(scene, m_raytracer.get())),
@@ -22,7 +24,7 @@ Renderer::Renderer(scene::Scene* scene):
 void Renderer::render(Image& image, int xOffset, int yOffset, int width, int height) const
 {
     Random random(0715517 * (yOffset + 1));
-    const scene::Camera& camera = m_scene->camera;
+    const Camera& camera = m_scene->camera;
 
     const glm::vec4 viewport(0, 0, 1, 1);
     glm::vec3 p1 = glm::unProject(glm::vec3(0.f, 0.f, 0.f), camera.transform, camera.projection, viewport);

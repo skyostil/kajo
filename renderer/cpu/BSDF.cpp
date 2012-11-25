@@ -4,6 +4,8 @@
 #include "Random.h"
 #include "SurfacePoint.h"
 
+using namespace cpu;
+
 BSDF::BSDF(const SurfacePoint* surfacePoint):
     m_surfacePoint(surfacePoint)
 {

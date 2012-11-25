@@ -10,24 +10,23 @@
 #include <memory>
 #include <vector>
 
+namespace cpu
+{
+
+class Material;
+class Sphere;
+class Plane;
+class PointLight;
+class Scene;
 class BSDF;
 class Random;
 class Raytracer;
 class SurfacePoint;
 
-namespace scene
-{
-    class Material;
-    class Sphere;
-    class Plane;
-    class PointLight;
-    class Scene;
-}
-
 class Shader
 {
 public:
-    Shader(scene::Scene* scene, Raytracer* raytracer);
+    Shader(Scene* scene, Raytracer* raytracer);
 
     enum LightSamplingScheme
     {
@@ -50,8 +49,10 @@ private:
                                       const TransformDataList& transformDataList,
                                       const SurfacePoint&, const glm::vec3& direction) const;
 
-    scene::Scene* m_scene;
+    Scene* m_scene;
     Raytracer* m_raytracer;
 };
+
+}
 
 #endif

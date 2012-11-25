@@ -3,6 +3,8 @@
 #include "Random.h"
 #include <algorithm>
 
+using namespace cpu;
+
 Random::Random(unsigned seed)
 {
     setSeed(seed);

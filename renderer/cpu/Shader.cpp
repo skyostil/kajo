@@ -1,5 +1,7 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
+#include "renderer/Util.h"
+#include "scene/Scene.h"
 #include "BSDF.h"
 #include "Light.h"
 #include "Random.h"
@@ -7,13 +9,14 @@
 #include "Raytracer.h"
 #include "Shader.h"
 #include "SurfacePoint.h"
-#include "Util.h"
-#include "scene/Scene.h"
+#include "PrecalculatedScene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include <limits>
 #include <cmath>
+
+using namespace cpu;
 
 namespace
 {
@@ -21,7 +24,7 @@ const float g_surfaceEpsilon = 0.001f;
 const int g_depthLimit = 8;
 }
 
-Shader::Shader(scene::Scene* scene, Raytracer* raytracer):
+Shader::Shader(Scene* scene, Raytracer* raytracer):
     m_scene(scene),
     m_raytracer(raytracer)
 {
@@ -33,10 +36,10 @@ class LightSampler
 };
 
 template <>
-class LightSampler<scene::Sphere>
+class LightSampler<Sphere>
 {
 public:
-    LightSampler(const SurfacePoint* surfacePoint, const Raytracer* raytracer, const scene::Sphere* sphere,
+    LightSampler(const SurfacePoint* surfacePoint, const Raytracer* raytracer, const Sphere* sphere,
                  const TransformData* transformData):
         light(surfacePoint, raytracer, sphere, transformData, sphere->material.emission)
     {
@@ -118,7 +121,7 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
         return m_scene->backgroundColor;
 
     // Account for emission
-    const scene::Material* material = surfacePoint.material;
+    const Material* material = surfacePoint.material;
     glm::vec4 radiance = (lightSamplingScheme == SampleAllObjects) ? material->emission : glm::vec4();
 
     // Terminate path with Russian roulette

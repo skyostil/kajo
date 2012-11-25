@@ -10,7 +10,7 @@
             "radius": 1,
             "specular": "#888",
             "specularExponent": 100,
-            "transparency": "#dde",
+            "xtransparency": "#dde",
             "refractiveIndex": 2.0,
             "transform": "translate(-2, 0, 0)",
         },
@@ -42,7 +42,9 @@
         {
             "name": "ground",
             "type": "plane",
-            "diffuse": "#666",
+            "diffuse": "#000",
+            "specular": "#fff",
+            "specularExponent": 1000,
             "transform": "translate(0, 1, 0)",
         },
         {

@@ -3,13 +3,16 @@
 #define RANDOM_H
 
 #include <glm/glm.hpp>
-#include "Util.h"
+#include "renderer/Util.h"
 
 #if defined(USE_SSE2)
 #    include <pmmintrin.h>
 #else
 #    include <stdint.h>
 #endif
+
+namespace cpu
+{
 
 template <typename T>
 struct RandomValue
@@ -63,5 +66,7 @@ private:
     uint32_t m_low;
 #endif
 } __attribute__((aligned(16)));
+
+}
 
 #endif // RANDOM_H

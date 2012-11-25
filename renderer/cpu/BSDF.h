@@ -4,6 +4,9 @@
 
 #include <glm/glm.hpp>
 
+namespace cpu
+{
+
 class SurfacePoint;
 class Random;
 
@@ -58,5 +61,7 @@ public:
 private:
     glm::vec4 m_color;
 };
+
+}
 
 #endif // BSDF_H

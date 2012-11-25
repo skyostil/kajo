@@ -4,31 +4,34 @@
 
 #include <memory>
 
-class Image;
-class Raytracer;
-class Shader;
+#include "Raytracer.h"
+#include "Shader.h"
 
-namespace scene
+class Image;
+
+namespace cpu
 {
-    class Scene;
-}
+
+class Scene;
 
 typedef std::function<bool(int pass, int samples, int xOffset, int yOffset, int width, int height)> RenderObserver;
 
 class Renderer
 {
 public:
-    Renderer(scene::Scene* scene);
+    Renderer(Scene* scene);
 
     void setObserver(RenderObserver observer);
     void render(Image& image, int xOffset, int yOffset, int width, int height) const;
 
 private:
-    scene::Scene* m_scene;
+    Scene* m_scene;
     std::unique_ptr<Raytracer> m_raytracer;
     std::unique_ptr<Shader> m_shader;
     unsigned m_samples;
     RenderObserver m_observer;
 };
+
+}
 
 #endif

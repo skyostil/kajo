@@ -11,12 +11,13 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-using namespace cpu;
+namespace cpu
+{
 
-Renderer::Renderer(Scene* scene):
-    m_scene(scene),
-    m_raytracer(new Raytracer(scene)),
-    m_shader(new Shader(scene, m_raytracer.get())),
+Renderer::Renderer(const scene::Scene& scene):
+    m_scene(new Scene(scene)),
+    m_raytracer(new Raytracer(m_scene.get())),
+    m_shader(new Shader(m_scene.get(), m_raytracer.get())),
     m_samples(32)
 {
 }
@@ -82,4 +83,6 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
 void Renderer::setObserver(RenderObserver observer)
 {
     m_observer = observer;
+}
+
 }

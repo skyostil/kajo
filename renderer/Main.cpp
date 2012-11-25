@@ -1,4 +1,5 @@
 // Copyright (C) 2012 Sami Kyöstilä
+#include "Renderer.h"
 #include "cpu/Renderer.h"
 #include "scene/Parser.h"
 #include "scene/Scene.h"
@@ -113,7 +114,7 @@ struct RenderUpdate
 
 typedef std::vector<std::future<void>> RenderTasks;
 
-void createTasks(Image& image, cpu::Renderer& renderer, RenderTasks& tasks)
+void createTasks(Image& image, Renderer& renderer, RenderTasks& tasks)
 {
     int slice = (image.height + 1) / cpuCount();
     for (int y = 0; y < image.height; y += slice)
@@ -136,19 +137,19 @@ void joinTasks(RenderTasks& tasks)
 
 void render(Image& image, scene::Scene& scene)
 {
-    cpu::Renderer renderer(new cpu::Scene(scene));
+    std::unique_ptr<Renderer> renderer(new cpu::Renderer(scene));
     std::unique_ptr<Preview> preview(Preview::create(&image));
     bool done = false;
 
     Queue<RenderUpdate> updateQueue;
-    renderer.setObserver([&updateQueue, &done] (int pass, int samples, int xOffset, int yOffset, int width, int height) {
+    renderer->setObserver([&updateQueue, &done] (int pass, int samples, int xOffset, int yOffset, int width, int height) {
         std::thread::id threadId = std::this_thread::get_id();
         updateQueue.push(RenderUpdate{threadId, pass, samples, xOffset, yOffset, width, height});
         return !done;
     });
 
     RenderTasks tasks;
-    createTasks(image, renderer, tasks);
+    createTasks(image, *renderer, tasks);
 
     while (preview->processEvents())
     {

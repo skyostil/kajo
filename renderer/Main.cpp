@@ -1,6 +1,7 @@
 // Copyright (C) 2012 Sami Kyöstilä
 #include "Scheduler.h"
 #include "cpu/Scheduler.h"
+#include "gl/Scheduler.h"
 #include "scene/Parser.h"
 #include "scene/Scene.h"
 #include "Image.h"
@@ -96,6 +97,7 @@ void buildTestScene(scene::Scene& scene)
 int main(int argc, char** argv)
 {
     std::vector<std::string> args(&argv[0], &argv[argc]);
+    std::string rendererName = "cpu";
 
     int width = 640;
     int height = 480;
@@ -104,13 +106,16 @@ int main(int argc, char** argv)
         if (args[i] == "--help") {
             printf("Usage: %s OPTIONS SCENE\n\n"
                    "Options:\n"
-                   "    -w N    Image width (640)\n"
-                   "    -h N    Image height (480)\n", args[0].c_str());
+                   "    -w SIZE    Image width (640)\n"
+                   "    -h SIZE    Image height (480)\n"
+                   "    -r NAME    Renderer (cpu, gl)\n", args[0].c_str());
             return 1;
         } else if (args[i] == "-w" && hasMoreArgs) {
             width = atoi(args[++i].c_str());
         } else if (args[i] == "-h" && hasMoreArgs) {
             height = atoi(args[++i].c_str());
+        } else if (args[i] == "-r" && hasMoreArgs) {
+            rendererName = args[++i];
         }
     }
 
@@ -123,8 +128,18 @@ int main(int argc, char** argv)
     }
 
     std::unique_ptr<Image> image(new Image(width, height));
-    std::unique_ptr<Preview> preview(Preview::create(image.get()));
-    std::unique_ptr<Scheduler> scheduler(new cpu::Scheduler(scene, image.get(), preview.get()));
+    std::unique_ptr<Preview> preview(Preview::create(image.get(), true));
+    std::unique_ptr<Scheduler> scheduler;
+
+    if (rendererName == "cpu") {
+        scheduler.reset(new cpu::Scheduler(scene, image.get(), preview.get()));
+    } else if (rendererName == "gl") {
+        scheduler.reset(new gl::Scheduler(scene, image.get(), preview.get()));
+    } else {
+        std::cerr << "Unknown renderer: " << rendererName << std::endl;
+        return 1;
+    }
+
     scheduler->run();
     image->save("out.png");
 }

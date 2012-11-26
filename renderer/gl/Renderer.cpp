@@ -8,13 +8,13 @@
 namespace gl
 {
 
-#if 0
 Renderer::Renderer(const scene::Scene& scene)
 {
 }
 
 void Renderer::render(Image& image, int xOffset, int yOffset, int width, int height) const
 {
+#if 0
     const Camera& camera = m_scene->camera;
 
     const glm::vec4 viewport(0, 0, 1, 1);
@@ -31,12 +31,7 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
         if (m_observer && !m_observer(pass, samples, xOffset, yOffset, width, height))
             return;
     }
-}
-
-void Renderer::setObserver(RenderObserver observer)
-{
-    m_observer = observer;
-}
 #endif
+}
 
 }

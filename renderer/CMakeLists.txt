@@ -1,6 +1,9 @@
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/renderer")
+
 find_package(Threads)
 find_package(SDL REQUIRED)
 find_package(SDL_ttf)
+find_package(GLEW REQUIRED)
 
 add_executable(
     renderer
@@ -39,6 +42,8 @@ add_executable(
     # OpenGL renderer
     gl/Renderer.cpp
     gl/Renderer.h
+    gl/Scheduler.cpp
+    gl/Scheduler.h
 )
 
 target_link_libraries(
@@ -46,6 +51,7 @@ target_link_libraries(
     scene
     lodepng
     ${SDL_LIBRARY}
+    ${GLEW_LIBRARY}
     ${SDLTTF_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}
 )

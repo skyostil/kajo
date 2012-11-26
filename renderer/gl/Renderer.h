@@ -4,8 +4,21 @@
 
 class Image;
 
+namespace scene
+{
+class Scene;
+}
+
 namespace gl
 {
+
+class Renderer
+{
+public:
+    Renderer(const scene::Scene& scene);
+
+    void render(Image& image, int xOffset, int yOffset, int width, int height) const;
+};
 
 }
 

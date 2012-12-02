@@ -2,12 +2,13 @@
 #ifndef PREVIEW_H
 #define PREVIEW_H
 
+#include "GLHelpers.h"
+
 #include <chrono>
 #include <map>
 #include <memory>
 #include <thread>
 #include <SDL/SDL_ttf.h>
-#include <GL/glew.h>
 
 class Image;
 class SDL_Surface;
@@ -30,8 +31,8 @@ private:
     SDL_Surface* m_screen;
     TTF_Font* m_font;
 
-    GLuint m_texture;
-    GLuint m_fbo;
+    Texture m_texture;
+    Framebuffer m_fbo;
     SDL_Surface* m_statusSurface;
 
     class ThreadStatistics

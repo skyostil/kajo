@@ -2,15 +2,13 @@
 
 #include "GLHelpers.h"
 
-namespace gl
-{
-
 Texture createTexture(GLenum target, int levels, GLenum internalFormat, int width, int height)
 {
     GLuint id;
     glGenTextures(1, &id);
     glBindTexture(target, id);
     glTexStorage2D(target, levels, internalFormat, width, height);
+    ASSERT_GL();
     return Texture(id);
 }
 
@@ -58,7 +56,7 @@ bool compileShader(GLuint id, const std::string& source)
     }
     return true;
 }
-    
+
 bool compileProgram(GLuint id, const std::string& vertSource, const std::string& fragSource,
                     const std::list<std::string>& attributes)
 {
@@ -94,6 +92,4 @@ bool compileProgram(GLuint id, const std::string& vertSource, const std::string&
     }
     ASSERT_GL();
     return true;
-}
-
 }

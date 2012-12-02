@@ -1,6 +1,6 @@
 // Copyright (C) 2012 Sami Kyöstilä
-#ifndef GL_GL_HELPERS_H
-#define GL_GL_HELPERS_H
+#ifndef GL_HELPERS_H
+#define GL_HELPERS_H
 
 #include <GL/glew.h>
 #include <memory>
@@ -18,7 +18,7 @@
         if (status) \
         { \
             std::ostringstream s; \
-            s << "OpenGL error raised in " << __FILE__ << "() on line " << __LINE__ << ": " << std::setbase(16) << "0x" << status; \
+            s << "OpenGL error raised in " << __FILE__ << " on line " << __LINE__ << ": " << std::setbase(16) << "0x" << status; \
             throw std::runtime_error(s.str()); \
         } \
     } while (0)
@@ -35,9 +35,6 @@
     } while (0)
 
 #define SHADER(X) #X
-
-namespace gl
-{
 
 template <void (*F)(GLsizei, const GLuint*)>
 class GLDeleter
@@ -117,6 +114,4 @@ bool compileShader(GLuint id, const std::string& source);
 bool compileProgram(GLuint id, const std::string& vertSource, const std::string& fragSource,
                     const std::list<std::string>& attributes);
 
-}
-
-#endif // GL_GL_HELPERS_H
+#endif // GL_HELPERS_H

@@ -1,9 +1,9 @@
 // Copyright (C) 2012 Sami Kyöstilä
 
 #include "Renderer.h"
+#include "renderer/GLHelpers.h"
 #include "renderer/Image.h"
 #include "Scene.h"
-#include "GLHelpers.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 

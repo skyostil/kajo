@@ -38,16 +38,14 @@ std::unique_ptr<Preview> Preview::create(Image* image, bool useOpenGL)
             std::cerr << "glewInit() failed" << std::endl;
             return nullptr;
         }
-        glGenTextures(1, &preview->m_texture);
-        glBindTexture(GL_TEXTURE_2D, preview->m_texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height + statusLineHeight, 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-        glGenFramebuffers(1, &preview->m_fbo);
-        glBindFramebuffer(GL_FRAMEBUFFER, preview->m_fbo);
+        preview->m_texture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA8, image->width,
+                                           image->height + statusLineHeight);
+        preview->m_fbo = createFramebuffer();
+        glBindFramebuffer(GL_FRAMEBUFFER, preview->m_fbo.get());
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                               GL_TEXTURE_2D, preview->m_texture, 0);
+                               GL_TEXTURE_2D, preview->m_texture.get(), 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ASSERT_GL();
 
         preview->m_statusSurface =
             SDL_CreateRGBSurface(SDL_SWSURFACE, image->width, statusLineHeight, 32,
@@ -61,8 +59,6 @@ std::unique_ptr<Preview> Preview::create(Image* image, bool useOpenGL)
 Preview::Preview(Image* image):
     m_image(image),
     m_font(0),
-    m_texture(0),
-    m_fbo(0),
     m_statusSurface(0),
     m_startTime(std::chrono::steady_clock::now())
 {
@@ -70,10 +66,6 @@ Preview::Preview(Image* image):
 
 Preview::~Preview()
 {
-    if (m_fbo)
-        glDeleteFramebuffers(1, &m_fbo);
-    if (m_texture)
-        glDeleteTextures(1, &m_texture);
     if (m_font)
         TTF_CloseFont(m_font);
     if (m_statusSurface)
@@ -111,14 +103,14 @@ void Preview::updateScreen(int xOffset, int yOffset, int width, int height)
     size_t srcStride = m_image->width;
 
     if (m_texture) {
-        glBindTexture(GL_TEXTURE_2D, m_texture);
+        glBindTexture(GL_TEXTURE_2D, m_texture.get());
         glPixelStorei(GL_UNPACK_ROW_LENGTH, m_image->width);
         glTexSubImage2D(GL_TEXTURE_2D, 0, xOffset, yOffset, width, height,
                         GL_BGRA, GL_UNSIGNED_BYTE, &src[srcStride * yOffset + xOffset]);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
         drawStatusLine();
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo.get());
         glBlitFramebuffer(0, 0, m_image->width, m_image->height + statusLineHeight,
                              0, m_image->height + statusLineHeight, m_image->width, 0,
                              GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -211,8 +203,8 @@ void Preview::drawStatusLine()
     SDL_BlitSurface(statusText, nullptr, surface, &textRect);
     SDL_FreeSurface(statusText);
 
-    if (m_texture && SDL_LockSurface(surface) == 0) {
-        glBindTexture(GL_TEXTURE_2D, m_texture);
+    if (m_texture.get() && SDL_LockSurface(surface) == 0) {
+        glBindTexture(GL_TEXTURE_2D, m_texture.get());
         glPixelStorei(GL_UNPACK_ROW_LENGTH, surface->pitch / sizeof(uint32_t));
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, m_image->height, surface->w, surface->h,
                         GL_BGRA, GL_UNSIGNED_BYTE, surface->pixels);

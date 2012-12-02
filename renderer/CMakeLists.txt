@@ -7,6 +7,8 @@ find_package(GLEW REQUIRED)
 
 add_executable(
     renderer
+    GLHelpers.cpp
+    GLHelpers.h
     Image.cpp
     Image.h
     Main.cpp
@@ -40,8 +42,6 @@ add_executable(
     cpu/SurfacePoint.h
 
     # OpenGL renderer
-    gl/GLHelpers.cpp
-    gl/GLHelpers.h
     gl/Renderer.cpp
     gl/Renderer.h
     gl/Scene.cpp

@@ -74,21 +74,21 @@ RandomValue<glm::vec3> Random::generateHemispherical(const glm::vec3& normal)
     return result;
 }
 
-RandomValue<glm::vec3> Random::generateCosineHemispherical(const glm::vec3& normal, const glm::vec3& tangent, const glm::vec3& binormal)
+RandomValue<glm::vec3> Random::generateCosineHemispherical()
 {
     glm::vec4 sample = generate();
     float u = .5f * sample.x + .5f;
+    float v = .5f * sample.y + .5f;
     float r = sqrtf(u);
-    float theta = (sample.y + 1) * M_PI;
-    float x = r * cosf(theta);
-    float y = r * sinf(theta);
+    float phi = v * 2 * M_PI;
+    float x = r * cosf(phi);
+    float y = r * sinf(phi);
     float z = sqrtf(std::max(0.f, 1.f - u));
-    return RandomValue<glm::vec3>(x * tangent + y * binormal + z * normal, cosf(theta) * M_1_PI);
+    return RandomValue<glm::vec3>(glm::vec3(x, y, z), z * M_1_PI);
 }
 
-RandomValue<glm::vec3> Random::generatePhong(const glm::vec3& normal, float exponent)
+RandomValue<glm::vec3> Random::generatePhong(float exponent)
 {
-    // Compact Metallic Reflectance Models
     glm::vec4 sample = generate();
     float u = .5f * sample.x + .5f;
     float v = .5f * sample.y + .5f;

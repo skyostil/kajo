@@ -19,9 +19,12 @@ LambertBSDF::LambertBSDF(const SurfacePoint* surfacePoint, const glm::vec4& colo
 
 RandomValue<glm::vec3> LambertBSDF::generateSample(Random& random) const
 {
-    //return random.generateSpherical();
-    return random.generateHemispherical(m_surfacePoint->normal);
-    //return random.generateCosineHemispherical(m_surfacePoint->normal, m_surfacePoint->tangent, m_surfacePoint->binormal);
+    RandomValue<glm::vec3> result = random.generateCosineHemispherical();
+    result.value =
+        m_surfacePoint->tangent * result.value.x +
+        m_surfacePoint->binormal * result.value.y +
+        m_surfacePoint->normal * result.value.z;
+    return result;
 }
 
 glm::vec4 LambertBSDF::evaluateSample(const glm::vec3& direction) const
@@ -31,9 +34,8 @@ glm::vec4 LambertBSDF::evaluateSample(const glm::vec3& direction) const
 
 float LambertBSDF::sampleProbability(const glm::vec3& direction) const
 {
-    // Uniform BSDF over the hemisphere.
-    float hemisphereArea = 4 * M_PI / 2;
-    return 1 / hemisphereArea;
+    float cos_theta = glm::dot(direction, m_surfacePoint->normal);
+    return M_1_PI * cos_theta;
 }
 
 PhongBSDF::PhongBSDF(const SurfacePoint* surfacePoint, const glm::vec4& color, float exponent):
@@ -45,16 +47,15 @@ PhongBSDF::PhongBSDF(const SurfacePoint* surfacePoint, const glm::vec4& color, f
 
 RandomValue<glm::vec3> PhongBSDF::generateSample(Random& random) const
 {
-    RandomValue<glm::vec3> result = random.generatePhong(m_surfacePoint->normal, m_exponent);
+    RandomValue<glm::vec3> result = random.generatePhong(m_exponent);
 
     // Rotate the vector to point along the reflection.
     glm::vec3 reflection = glm::reflect(m_surfacePoint->view, m_surfacePoint->normal);
     //glm::vec3 vr = glm::vec3(generate());
-    glm::vec3 vr(0, 0, 1);
-    glm::vec3 vu = glm::normalize(glm::cross(vr, reflection));
-    glm::vec3 vv = glm::cross(vu, reflection);
-    glm::mat3 rot = glm::mat3(vu, vv, reflection);
-    result.value = rot * result.value;
+    glm::vec3 r(0, 0, 1);
+    glm::vec3 u = glm::normalize(glm::cross(r, reflection));
+    glm::vec3 v = glm::cross(u, reflection);
+    result.value = glm::mat3(u, v, reflection) * result.value;
     return result;
 }
 

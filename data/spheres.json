@@ -1,6 +1,6 @@
 {
     "camera": {
-        "projection": "perspective(45, 1.33, .1, 100)",
+        "projection": "perspective(45, .1, 100)",
         "transform": "lookat(-6, -.8, 4, 0, 0, 0, 0, -1, 0)",
     },
     "background": "#000",

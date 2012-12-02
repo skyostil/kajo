@@ -122,7 +122,8 @@ int main(int argc, char** argv)
     scene::Scene scene;
     if (argc == 1)
         buildTestScene(scene);
-    else if (!scene::Parser::load(scene, args[args.size() - 1])) {
+    else if (!scene::Parser::load(scene, args[args.size() - 1],
+                                  static_cast<float>(width) / height)) {
         std::cerr << "Failed to parse scene from " << args[args.size() - 1] << std::endl;
         return 1;
     }

@@ -139,7 +139,7 @@ static glm::mat4 parseTransform(const std::wstring& value)
     return result;
 }
 
-static scene::Camera parseCamera(JSONObject data)
+static scene::Camera parseCamera(JSONObject data, float aspectRatio)
 {
     scene::Camera camera;
     if (data.find(L"projection") != data.end())
@@ -148,8 +148,8 @@ static scene::Camera parseCamera(JSONObject data)
         if (projection.find(L"perspective(") == 0)
         {
             std::wstringstream ss(projection.substr(12));
-            glm::vec4 p = parseVec4(ss);
-            camera.projection = glm::perspective(p.x, p.y, p.z, p.w);
+            glm::vec3 p = parseVec3(ss);
+            camera.projection = glm::perspective(p.x, aspectRatio, p.y, p.z);
         }
     }
     if (data.find(L"transform") != data.end())
@@ -201,7 +201,7 @@ static void parseObjects(scene::Scene& scene, JSONArray data)
     }
 }
 
-bool scene::Parser::load(Scene& scene, const std::string& fileName)
+bool scene::Parser::load(Scene& scene, const std::string& fileName, float aspectRatio)
 {
     std::stringstream source;
     source << std::ifstream(fileName).rdbuf();
@@ -214,7 +214,7 @@ bool scene::Parser::load(Scene& scene, const std::string& fileName)
     if (sceneData.find(L"background") != sceneData.end())
         scene.backgroundColor = parseColor(sceneData[L"background"]->AsString());
     if (sceneData.find(L"camera") != sceneData.end())
-        scene.camera = parseCamera(sceneData[L"camera"]->AsObject());
+        scene.camera = parseCamera(sceneData[L"camera"]->AsObject(), aspectRatio);
     if (sceneData.find(L"objects") != sceneData.end())
         parseObjects(scene, sceneData[L"objects"]->AsArray());
 

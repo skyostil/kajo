@@ -12,7 +12,7 @@ class Scene;
 class Parser
 {
 public:
-    static bool load(Scene& scene, const std::string& fileName);
+    static bool load(Scene& scene, const std::string& fileName, float aspectRatio);
 };
 
 }

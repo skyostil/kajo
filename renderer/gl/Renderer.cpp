@@ -4,6 +4,7 @@
 #include "renderer/Image.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <list>
 #include <string>
 #include <iostream>
 #include <iomanip>
@@ -85,6 +86,18 @@ public:
     }
 };
 
+class GLBufferDeleter
+{
+public:
+    typedef GLuint pointer;
+
+    void operator()(GLuint id)
+    {
+        if (id)
+            glDeleteBuffers(1, &id);
+    }
+};
+
 typedef std::unique_ptr<GLuint, GLDeleter<glDeleteTextures>> Texture;
 static Texture createTexture(GLenum target, int levels, GLenum internalFormat, int width, int height)
 {
@@ -99,6 +112,16 @@ typedef std::unique_ptr<GLuint, GLShaderDeleter> Shader;
 typedef std::unique_ptr<GLuint, GLProgramDeleter> Program;
 typedef std::unique_ptr<GLuint, GLFramebufferDeleter> Framebuffer;
 
+typedef std::unique_ptr<GLuint, GLBufferDeleter> Buffer;
+static Buffer createBuffer(GLenum target, size_t size, const void* data, GLenum usage)
+{
+    GLuint id;
+    glGenBuffers(1, &id);
+    glBindBuffer(target, id);
+    glBufferData(target, size, data, usage);
+    return Buffer(id);
+}
+
 static bool compileShader(GLuint id, const std::string& source)
 {
     const char* s[] =
@@ -110,7 +133,7 @@ static bool compileShader(GLuint id, const std::string& source)
     glCompileShader(id);
 
     std::string infoLog;
-    GLint length;
+    GLint length = 0;
     glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
     if (length > 0) {
         std::unique_ptr<char[]> logData(new char[length]);
@@ -128,7 +151,8 @@ static bool compileShader(GLuint id, const std::string& source)
     return true;
 }
     
-static bool compileProgram(GLuint id, const std::string& vertSource, const std::string& fragSource)
+static bool compileProgram(GLuint id, const std::string& vertSource, const std::string& fragSource,
+                           const std::list<std::string>& attributes)
 {
     Shader vertShader(glCreateShader(GL_VERTEX_SHADER));
     Shader fragShader(glCreateShader(GL_FRAGMENT_SHADER));
@@ -138,14 +162,18 @@ static bool compileProgram(GLuint id, const std::string& vertSource, const std::
 
     glAttachShader(id, vertShader.get());
     glAttachShader(id, fragShader.get());
+
+    int n = 0;
+    for (const std::string& attribute: attributes)
+        glBindAttribLocation(id, n++, attribute.c_str());
     glLinkProgram(id);
 
     std::string infoLog;
-    GLint length;
+    GLint length = 0;
     glGetProgramiv(id, GL_INFO_LOG_LENGTH, &length);
     if (length > 0) {
         std::unique_ptr<char[]> logData(new char[length]);
-        glGetShaderInfoLog(id, length, &length, logData.get());
+        glGetProgramInfoLog(id, length, &length, logData.get());
         infoLog = logData.get();
     }
 
@@ -156,15 +184,18 @@ static bool compileProgram(GLuint id, const std::string& vertSource, const std::
         std::cerr << "Program linking failed: " << infoLog << std::endl;
         return false;
     }
+    ASSERT_GL();
     return true;
 }
 
 #define SHADER(X) #X
 
 static const char initVertShader[] = SHADER(
+    attribute vec4 position;
+
     void main()
     {
-        gl_Position = vec4(0.0, 0.8, 1.0, 1.0);
+        gl_Position = position;
     }
 );
 
@@ -197,10 +228,25 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     Texture distanceTexture = createTexture(GL_TEXTURE_2D, 1, GL_R32F, image.width, image.height);
     ASSERT_GL();
 
-    //Program initProgram(glCreateProgram());
-    //compileProgram(initProgram.get(), initVertShader, initFragShader);
-    //ASSERT_GL();
+    const float quadVertices[] = {
+        -1, -1, 0, 1,
+        1, -1, 0, 1,
+        -1, 1, 0, 1,
+        1, 1, 0, 1,
+    };
+    Buffer quadBuffer = createBuffer(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    ASSERT_GL();
 
+    Program initProgram(glCreateProgram());
+    compileProgram(initProgram.get(), initVertShader, initFragShader, {"position"});
+    ASSERT_GL();
+
+    glUseProgram(initProgram.get());
+    glBindBuffer(GL_ARRAY_BUFFER, quadBuffer.get());
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glUseProgram(0);
 /* 
     GLuint init
     glGenFramebuffers(1, &m_fbo);
@@ -209,8 +255,8 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
                            GL_TEXTURE_2D, preview->m_texture, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 */
-    glClearColor(1, .5, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    //glClearColor(1, .5, 0, 1);
+    //glClear(GL_COLOR_BUFFER_BIT);
 
     glPixelStorei(GL_PACK_ROW_LENGTH, image.width);
     glReadPixels(xOffset, yOffset, width, height, GL_BGRA, GL_UNSIGNED_BYTE, image.pixels.get());

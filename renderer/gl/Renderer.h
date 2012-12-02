@@ -2,7 +2,8 @@
 #ifndef GL_RENDERER_H
 #define GL_RENDERER_H
 
-#include <GL/glew.h>
+#include "Scene.h"
+#include <memory>
 
 class Image;
 
@@ -20,6 +21,9 @@ public:
     Renderer(const scene::Scene& scene);
 
     void render(Image& image, int xOffset, int yOffset, int width, int height) const;
+
+private:
+    std::unique_ptr<Scene> m_scene;
 };
 
 }

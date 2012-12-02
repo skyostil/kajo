@@ -1,6 +1,7 @@
 // Copyright (C) 2012 Sami Kyöstilä
 #include "Scheduler.h"
 #include "Renderer.h"
+#include "Scene.h"
 #include "renderer/Preview.h"
 #include "renderer/Image.h"
 

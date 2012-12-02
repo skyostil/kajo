@@ -2,211 +2,45 @@
 
 #include "Renderer.h"
 #include "renderer/Image.h"
+#include "Scene.h"
+#include "GLHelpers.h"
 
 #include <glm/gtc/matrix_transform.hpp>
-#include <list>
-#include <string>
-#include <iostream>
-#include <iomanip>
-#include <stdexcept>
-#include <sstream>
-
-#define ASSERT_GL() \
-    do \
-    { \
-        GLenum status = glGetError(); \
-        if (status) \
-        { \
-            std::ostringstream s; \
-            s << "OpenGL error raised in " << __FILE__ << "() on line " << __LINE__ << ": " << std::setbase(16) << "0x" << status; \
-            throw std::runtime_error(s.str()); \
-        } \
-    } while (0)
-
-#define ASSERT_GL_EXTENSION(EXTNAME) \
-    do \
-    { \
-        if (!(GLEW_ ## EXTNAME)) \
-        { \
-            std::ostringstream s; \
-            s << "OpenGL extension " #EXTNAME " not supported"; \
-            throw std::runtime_error(s.str()); \
-        } \
-    } while (0)
 
 namespace gl
 {
 
-template <void (*F)(GLsizei, const GLuint*)>
-class GLDeleter
-{
-public:
-    typedef GLuint pointer;
-
-    void operator()(GLuint id)
-    {
-        if (id)
-            F(1, &id);
-    }
-};
-
-class GLShaderDeleter
-{
-public:
-    typedef GLuint pointer;
-
-    void operator()(GLuint id)
-    {
-        if (id)
-            glDeleteShader(id);
-    }
-};
-
-class GLProgramDeleter
-{
-public:
-    typedef GLuint pointer;
-
-    void operator()(GLuint id)
-    {
-        if (id)
-            glDeleteProgram(id);
-    }
-};
-
-class GLFramebufferDeleter
-{
-public:
-    typedef GLuint pointer;
-
-    void operator()(GLuint id)
-    {
-        if (id)
-            glDeleteFramebuffers(1, &id);
-    }
-};
-
-class GLBufferDeleter
-{
-public:
-    typedef GLuint pointer;
-
-    void operator()(GLuint id)
-    {
-        if (id)
-            glDeleteBuffers(1, &id);
-    }
-};
-
-typedef std::unique_ptr<GLuint, GLDeleter<glDeleteTextures>> Texture;
-static Texture createTexture(GLenum target, int levels, GLenum internalFormat, int width, int height)
-{
-    GLuint id;
-    glGenTextures(1, &id);
-    glBindTexture(target, id);
-    glTexStorage2D(target, levels, internalFormat, width, height);
-    return Texture(id);
-}
-
-typedef std::unique_ptr<GLuint, GLShaderDeleter> Shader;
-typedef std::unique_ptr<GLuint, GLProgramDeleter> Program;
-typedef std::unique_ptr<GLuint, GLFramebufferDeleter> Framebuffer;
-
-typedef std::unique_ptr<GLuint, GLBufferDeleter> Buffer;
-static Buffer createBuffer(GLenum target, size_t size, const void* data, GLenum usage)
-{
-    GLuint id;
-    glGenBuffers(1, &id);
-    glBindBuffer(target, id);
-    glBufferData(target, size, data, usage);
-    return Buffer(id);
-}
-
-static bool compileShader(GLuint id, const std::string& source)
-{
-    const char* s[] =
-    {
-        source.c_str()
-    };
-
-    glShaderSource(id, 1, s, NULL);
-    glCompileShader(id);
-
-    std::string infoLog;
-    GLint length = 0;
-    glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-    if (length > 0) {
-        std::unique_ptr<char[]> logData(new char[length]);
-        glGetShaderInfoLog(id, length, &length, logData.get());
-        infoLog = logData.get();
-    }
-
-    GLint status;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE)
-    {
-        std::cerr << "Shader compilation failed: " << infoLog << std::endl;
-        return false;
-    }
-    return true;
-}
-    
-static bool compileProgram(GLuint id, const std::string& vertSource, const std::string& fragSource,
-                           const std::list<std::string>& attributes)
-{
-    Shader vertShader(glCreateShader(GL_VERTEX_SHADER));
-    Shader fragShader(glCreateShader(GL_FRAGMENT_SHADER));
-
-    if (!compileShader(vertShader.get(), vertSource) || !compileShader(fragShader.get(), fragSource))
-        return false;
-
-    glAttachShader(id, vertShader.get());
-    glAttachShader(id, fragShader.get());
-
-    int n = 0;
-    for (const std::string& attribute: attributes)
-        glBindAttribLocation(id, n++, attribute.c_str());
-    glLinkProgram(id);
-
-    std::string infoLog;
-    GLint length = 0;
-    glGetProgramiv(id, GL_INFO_LOG_LENGTH, &length);
-    if (length > 0) {
-        std::unique_ptr<char[]> logData(new char[length]);
-        glGetProgramInfoLog(id, length, &length, logData.get());
-        infoLog = logData.get();
-    }
-
-    GLint status;
-    glGetProgramiv(id, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE)
-    {
-        std::cerr << "Program linking failed: " << infoLog << std::endl;
-        return false;
-    }
-    ASSERT_GL();
-    return true;
-}
-
-#define SHADER(X) #X
-
 static const char initVertShader[] = SHADER(
     attribute vec4 position;
+    varying vec2 imagePosition;
 
     void main()
     {
         gl_Position = position;
+        imagePosition = position.xy * 0.5 + vec2(0.5);
     }
 );
 
 static const char initFragShader[] = SHADER(
+    uniform vec3 imageOrigin;
+    uniform vec3 imageRight;
+    uniform vec3 imageDown;
+    varying vec2 imagePosition;
+
     void main()
     {
         gl_FragColor = vec4(0.0, 0.8, 1.0, 1.0);
+        /*
+                        glm::vec4 offset = random.generate() * .5f + glm::vec4(.5f);
+                        float sx = x * pixelWidth + sampleX * sampleWidth + offset.x * sampleWidth;
+                        float sy = (image.height - y) * pixelHeight + sampleY * sampleHeight + offset.y * sampleHeight;
+                        glm::vec3 direction = p1 + (p2 - p1) * sx + (p3 - p1) * sy - origin;
+                        direction = glm::normalize(direction);*/
     }
 );
 
-Renderer::Renderer(const scene::Scene& scene)
+Renderer::Renderer(const scene::Scene& scene):
+    m_scene(new Scene(scene))
 {
 }
 
@@ -240,8 +74,19 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     Program initProgram(glCreateProgram());
     compileProgram(initProgram.get(), initVertShader, initFragShader, {"position"});
     ASSERT_GL();
+    
+    const Camera& camera = m_scene->camera;
+    const glm::vec4 viewport(0, 0, 1, 1);
+    glm::vec3 p1 = glm::unProject(glm::vec3(0.f, 0.f, 0.f), camera.transform, camera.projection, viewport);
+    glm::vec3 p2 = glm::unProject(glm::vec3(1.f, 0.f, 0.f), camera.transform, camera.projection, viewport);
+    glm::vec3 p3 = glm::unProject(glm::vec3(0.f, 1.f, 0.f), camera.transform, camera.projection, viewport);
+    glm::vec3 origin(glm::inverse(camera.transform) * glm::vec4(0.f, 0.f, 0.f, 1.f));
 
     glUseProgram(initProgram.get());
+    glUniform3f(glGetUniformLocation(initProgram.get(), "imageOrigin"), p1.x, p1.y, p1.z);
+    glUniform3f(glGetUniformLocation(initProgram.get(), "imageRight"), p2.x, p2.y, p2.z);
+    glUniform3f(glGetUniformLocation(initProgram.get(), "imageBottom"), p3.x, p3.y, p3.z);
+
     glBindBuffer(GL_ARRAY_BUFFER, quadBuffer.get());
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);

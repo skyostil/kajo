@@ -40,8 +40,12 @@ add_executable(
     cpu/SurfacePoint.h
 
     # OpenGL renderer
+    gl/GLHelpers.cpp
+    gl/GLHelpers.h
     gl/Renderer.cpp
     gl/Renderer.h
+    gl/Scene.cpp
+    gl/Scene.h
     gl/Scheduler.cpp
     gl/Scheduler.h
 )

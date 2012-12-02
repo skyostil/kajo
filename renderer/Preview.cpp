@@ -118,11 +118,11 @@ void Preview::updateScreen(int xOffset, int yOffset, int width, int height)
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
         drawStatusLine();
 
-        glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, m_fbo);
-        glBlitFramebufferEXT(0, 0, m_image->width, m_image->height + statusLineHeight,
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
+        glBlitFramebuffer(0, 0, m_image->width, m_image->height + statusLineHeight,
                              0, m_image->height + statusLineHeight, m_image->width, 0,
                              GL_COLOR_BUFFER_BIT, GL_NEAREST);
-        glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, 0);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
         SDL_GL_SwapBuffers();
         return;

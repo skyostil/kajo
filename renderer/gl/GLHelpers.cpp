@@ -14,6 +14,13 @@ Texture createTexture(GLenum target, int levels, GLenum internalFormat, int widt
     return Texture(id);
 }
 
+Framebuffer createFramebuffer()
+{
+    GLuint id;
+    glGenFramebuffers(1, &id);
+    return Framebuffer(id);
+}
+
 Buffer createBuffer(GLenum target, size_t size, const void* data, GLenum usage)
 {
     GLuint id;

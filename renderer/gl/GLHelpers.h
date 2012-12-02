@@ -105,7 +105,9 @@ Texture createTexture(GLenum target, int levels, GLenum internalFormat, int widt
 
 typedef std::unique_ptr<GLuint, GLShaderDeleter> Shader;
 typedef std::unique_ptr<GLuint, GLProgramDeleter> Program;
+
 typedef std::unique_ptr<GLuint, GLFramebufferDeleter> Framebuffer;
+Framebuffer createFramebuffer();
 
 typedef std::unique_ptr<GLuint, GLBufferDeleter> Buffer;
 Buffer createBuffer(GLenum target, size_t size, const void* data, GLenum usage);

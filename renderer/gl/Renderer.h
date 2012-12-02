@@ -2,6 +2,8 @@
 #ifndef GL_RENDERER_H
 #define GL_RENDERER_H
 
+#include <GL/glew.h>
+
 class Image;
 
 namespace scene

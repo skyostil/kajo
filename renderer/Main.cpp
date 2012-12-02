@@ -101,8 +101,8 @@ int main(int argc, char** argv)
 
     int width = 640;
     int height = 480;
-    for (size_t i = 1; i < args.size() - 1; i++) {
-        bool hasMoreArgs = i < args.size() - 2;
+    for (size_t i = 1; i < args.size(); i++) {
+        bool hasMoreArgs = i < args.size() - 1;
         if (args[i] == "--help") {
             printf("Usage: %s OPTIONS SCENE\n\n"
                    "Options:\n"

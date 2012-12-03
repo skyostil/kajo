@@ -97,6 +97,18 @@ public:
     }
 };
 
+class GLSamplerDeleter
+{
+public:
+    typedef GLuint pointer;
+
+    void operator()(GLuint id)
+    {
+        if (id)
+            glDeleteSamplers(1, &id);
+    }
+};
+
 typedef std::unique_ptr<GLuint, GLDeleter<glDeleteTextures>> Texture;
 Texture createTexture(GLenum target, int levels, GLenum internalFormat, int width, int height);
 
@@ -105,6 +117,9 @@ typedef std::unique_ptr<GLuint, GLProgramDeleter> Program;
 
 typedef std::unique_ptr<GLuint, GLFramebufferDeleter> Framebuffer;
 Framebuffer createFramebuffer();
+
+typedef std::unique_ptr<GLuint, GLSamplerDeleter> Sampler;
+Sampler createSampler();
 
 typedef std::unique_ptr<GLuint, GLBufferDeleter> Buffer;
 Buffer createBuffer(GLenum target, size_t size, const void* data, GLenum usage);

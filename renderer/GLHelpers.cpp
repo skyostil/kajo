@@ -19,6 +19,13 @@ Framebuffer createFramebuffer()
     return Framebuffer(id);
 }
 
+Sampler createSampler()
+{
+    GLuint id;
+    glGenSamplers(1, &id);
+    return Sampler(id);
+}
+
 Buffer createBuffer(GLenum target, size_t size, const void* data, GLenum usage)
 {
     GLuint id;
@@ -30,8 +37,7 @@ Buffer createBuffer(GLenum target, size_t size, const void* data, GLenum usage)
 
 bool compileShader(GLuint id, const std::string& source)
 {
-    const char* s[] =
-    {
+    const char* s[] = {
         source.c_str()
     };
 
@@ -49,8 +55,7 @@ bool compileShader(GLuint id, const std::string& source)
 
     GLint status;
     glGetShaderiv(id, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE)
-    {
+    if (status != GL_TRUE) {
         std::cerr << "Shader compilation failed: " << infoLog << std::endl;
         return false;
     }
@@ -85,8 +90,7 @@ bool compileProgram(GLuint id, const std::string& vertSource, const std::string&
 
     GLint status;
     glGetProgramiv(id, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE)
-    {
+    if (status != GL_TRUE) {
         std::cerr << "Program linking failed: " << infoLog << std::endl;
         return false;
     }

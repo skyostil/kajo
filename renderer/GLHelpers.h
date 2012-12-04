@@ -34,6 +34,18 @@
         } \
     } while (0)
 
+#define ASSERT_GL_FRAMEBUFFER_COMPLETE(TARGET) \
+    do \
+    { \
+        GLenum status = glCheckFramebufferStatus(TARGET); \
+        if (status != GL_FRAMEBUFFER_COMPLETE) \
+        { \
+            std::ostringstream s; \
+            s << "OpenGL framebuffer incomplete in " << __FILE__ << " on line " << __LINE__ << ": " << std::setbase(16) << "0x" << status; \
+            throw std::runtime_error(s.str()); \
+        } \
+    } while (0)
+
 #define SHADER(X) #X
 
 template <void (*F)(GLsizei, const GLuint*)>

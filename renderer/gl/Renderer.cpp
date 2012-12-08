@@ -265,9 +265,9 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
          "    Material material = materials[int(objectIndex)];\n"
          "\n"
          "    gl_FragColor = vec4(origin + direction * distance + normal, 1.0);\n"
-         "    gl_FragColor = 0.001 * gl_FragColor + material.emission + material.diffuse * 0.5 + material.specular * 0.5;\n"
+         "    gl_FragColor = 0.001 * gl_FragColor + material.emission + (material.diffuse + material.specular) * max(0.0, -dot(direction, normal));\n"
          "}\n";
-    std::cout << s.str() << '\n';
+    //std::cout << s.str() << '\n';
 
     // Shade and generate new rays
     Program shaderProgram(glCreateProgram());

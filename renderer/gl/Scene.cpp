@@ -57,19 +57,19 @@ Material::Material(const scene::Material& material):
 {
 }
 
-void Material::writeMaterialInitializer(std::ostringstream& s) const
+void Material::writeInitializer(std::ostringstream& s) const
 {
-    s << "Material(";
+    s << "Material(vec4(";
     writeVec4(s, material.ambient);
-    s << ", ";
+    s << "), vec4(";
     writeVec4(s, material.diffuse);
-    s << ", ";
+    s << "), vec4(";
     writeVec4(s, material.specular);
-    s << ", ";
+    s << "), vec4(";
     writeVec4(s, material.emission);
-    s << ", ";
+    s << "), vec4(";
     writeVec4(s, material.transparency);
-    s << ", ";
+    s << "), ";
     writeFloat(s, material.specularExponent);
     s << ", ";
     writeFloat(s, material.refractiveIndex);

@@ -67,13 +67,15 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     // 2. Repeat:
     // - Intersect all rays. Produces distance, normal, object index. Object
     //   index is encoded into the length of the normal.
-    // - Generate new rays based on shading
+    // - Generate new rays based on shading. Produces origin, direction, color,
+    //   weight.
 
     ASSERT_GL();
 
     Texture originTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
     Texture directionTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
     Texture distanceNormalTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
+    Texture colorWeightTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
     ASSERT_GL();
 
     const float quadVertices[] = {
@@ -214,7 +216,8 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
 
     // Generate shader program
     s.str("");
-    s << "varying vec2 imagePosition;\n"
+    s << "#version 120\n" // for first class arrays
+         "varying vec2 imagePosition;\n"
          "uniform sampler2D rayOriginSampler;\n"
          "uniform sampler2D rayDirectionSampler;\n"
          "uniform sampler2D distanceNormalSampler;\n"
@@ -230,6 +233,25 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
          "};\n"
          "\n";
 
+    s << "Material materials[" << objectIndex << "] = Material[" << objectIndex << "](\n";
+    size_t materialIndex = 0;
+    for (size_t i = 0; i < m_scene->planes.size(); i++) {
+        s << "    ";
+        m_scene->planes[i].material.writeInitializer(s);
+        if (++materialIndex != objectIndex)
+            s << ",";
+        s << "\n";
+    }
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        s << "    ";
+        m_scene->spheres[i].material.writeInitializer(s);
+        if (++materialIndex != objectIndex)
+            s << ",";
+        s << "\n";
+    }
+    s << ");\n"
+         "\n";
+
     s << "void main()\n"
          "{\n"
          "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
@@ -239,9 +261,11 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
          "    float distance = distanceNormal.w;\n"
          "    float objectIndex = length(normal);\n"
          "    normal = normal / objectIndex;\n"
-         "    objectIndex = objectIndex - 1.0;\n"
+         "    objectIndex = objectIndex - 1.0 + 0.5;\n"
+         "    Material material = materials[int(objectIndex)];\n"
          "\n"
          "    gl_FragColor = vec4(origin + direction * distance + normal, 1.0);\n"
+         "    gl_FragColor = 0.001 * gl_FragColor + material.emission + material.diffuse * 0.5 + material.specular * 0.5;\n"
          "}\n";
     std::cout << s.str() << '\n';
 

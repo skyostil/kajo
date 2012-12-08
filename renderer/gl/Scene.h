@@ -18,7 +18,7 @@ class Material
 public:
     explicit Material(const scene::Material& material);
 
-    void writeMaterialInitializer(std::ostringstream& s) const;
+    void writeInitializer(std::ostringstream& s) const;
 
     scene::Material material;
 };

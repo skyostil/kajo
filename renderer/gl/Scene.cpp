@@ -6,13 +6,6 @@
 
 using namespace gl;
 
-Transform::Transform(const glm::mat4 matrix):
-    matrix(matrix),
-    invMatrix(glm::inverse(matrix)),
-    determinant(glm::determinant(matrix))
-{
-}
-
 static void writeFloat(std::ostringstream& s, float value)
 {
     std::string v = std::to_string(value);
@@ -30,6 +23,64 @@ static void writeMatrix(std::ostringstream& s, const glm::mat4& m)
                 s << ", ";
         }
     }
+}
+
+static void writeVec2(std::ostringstream& s, const glm::vec2& v)
+{
+    writeFloat(s, v.x);
+    s << ", ";
+    writeFloat(s, v.y);
+}
+
+static void writeVec3(std::ostringstream& s, const glm::vec3& v)
+{
+    writeFloat(s, v.x);
+    s << ", ";
+    writeFloat(s, v.y);
+    s << ", ";
+    writeFloat(s, v.z);
+}
+
+static void writeVec4(std::ostringstream& s, const glm::vec4& v)
+{
+    writeFloat(s, v.x);
+    s << ", ";
+    writeFloat(s, v.y);
+    s << ", ";
+    writeFloat(s, v.z);
+    s << ", ";
+    writeFloat(s, v.w);
+}
+
+Material::Material(const scene::Material& material):
+    material(material)
+{
+}
+
+void Material::writeMaterialInitializer(std::ostringstream& s) const
+{
+    s << "Material(";
+    writeVec4(s, material.ambient);
+    s << ", ";
+    writeVec4(s, material.diffuse);
+    s << ", ";
+    writeVec4(s, material.specular);
+    s << ", ";
+    writeVec4(s, material.emission);
+    s << ", ";
+    writeVec4(s, material.transparency);
+    s << ", ";
+    writeFloat(s, material.specularExponent);
+    s << ", ";
+    writeFloat(s, material.refractiveIndex);
+    s << ")";
+}
+
+Transform::Transform(const glm::mat4 matrix):
+    matrix(matrix),
+    invMatrix(glm::inverse(matrix)),
+    determinant(glm::determinant(matrix))
+{
 }
 
 void Transform::writeMatrixInitializer(std::ostringstream& s) const
@@ -53,9 +104,10 @@ Sphere::Sphere(const scene::Sphere& sphere):
 {
 }
 
-void Sphere::writeIntersector(std::ostringstream& s, const std::string& name) const
+void Sphere::writeIntersector(std::ostringstream& s, const std::string& name, size_t objectIndex) const
 {
-    s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance, inout float maxDistance, inout vec3 normal)\n";
+    s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance,\n"
+         "        inout float maxDistance, inout vec3 normal, inout float objectIndex)\n";
     s << "{\n";
     s << "    mat4 transform = ";
     transform.writeMatrixInitializer(s);
@@ -71,6 +123,10 @@ void Sphere::writeIntersector(std::ostringstream& s, const std::string& name) co
 
     s << "    float radius2 = ";
     writeFloat(s, radius * radius);
+    s << ";\n";
+
+    s << "    float localObjectIndex = ";
+    writeFloat(s, objectIndex);
     s << ";\n";
 
     s << "    vec3 localDir = mat3(invTransform) * direction;\n"
@@ -107,6 +163,7 @@ void Sphere::writeIntersector(std::ostringstream& s, const std::string& name) co
          "            maxDistance = t0;\n"
          "            normal = localOrigin + localDir * t0;\n"
          "            normal = normalize(mat3(transform) * normal);\n"
+         "            objectIndex = localObjectIndex;\n"
          "        }\n"
          "    }\n"
          "}\n";
@@ -118,9 +175,10 @@ Plane::Plane(const scene::Plane& plane):
 {
 }
 
-void Plane::writeIntersector(std::ostringstream& s, const std::string& name) const
+void Plane::writeIntersector(std::ostringstream& s, const std::string& name, size_t objectIndex) const
 {
-    s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance, inout float maxDistance, inout vec3 normal)\n";
+    s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance,\n"
+         "        inout float maxDistance, inout vec3 normal, inout float objectIndex)\n";
     s << "{\n";
     s << "    mat4 transform = ";
     transform.writeMatrixInitializer(s);
@@ -134,6 +192,10 @@ void Plane::writeIntersector(std::ostringstream& s, const std::string& name) con
     writeFloat(s, transform.determinant);
     s << ";\n";
 
+    s << "    float localObjectIndex = ";
+    writeFloat(s, objectIndex);
+    s << ";\n";
+
     s << "    vec3 localDir = mat3(invTransform) * direction;\n"
          "    vec3 localOrigin = (invTransform * vec4(origin, 1.0)).xyz;\n"
          "    vec3 localNormal = vec3(0.0, 1.0, 0.0);\n"
@@ -142,6 +204,7 @@ void Plane::writeIntersector(std::ostringstream& s, const std::string& name) con
          "    if (t > minDistance && t < maxDistance) {\n"
          "        maxDistance = t;\n"
          "        normal = mat3(transform) * -localNormal;\n"
+         "        objectIndex = localObjectIndex;\n"
          "    }\n"
          "}\n";
 }

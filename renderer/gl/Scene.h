@@ -11,13 +11,22 @@
 namespace gl
 {
 
-using scene::Material;
 using scene::Camera;
+
+class Material
+{
+public:
+    explicit Material(const scene::Material& material);
+
+    void writeMaterialInitializer(std::ostringstream& s) const;
+
+    scene::Material material;
+};
 
 class Transform
 {
 public:
-    Transform(const glm::mat4 matrix);
+    explicit Transform(const glm::mat4 matrix);
 
     void writeMatrixInitializer(std::ostringstream& s) const;
     void writeInverseMatrixInitializer(std::ostringstream& s) const;
@@ -30,9 +39,9 @@ public:
 class Sphere
 {
 public:
-    Sphere(const scene::Sphere& sphere);
+    explicit Sphere(const scene::Sphere& sphere);
 
-    void writeIntersector(std::ostringstream& s, const std::string& name) const;
+    void writeIntersector(std::ostringstream& s, const std::string& name, size_t objectIndex) const;
 
     Transform transform;
     Material material;
@@ -42,9 +51,9 @@ public:
 class Plane
 {
 public:
-    Plane(const scene::Plane& plane);
+    explicit Plane(const scene::Plane& plane);
 
-    void writeIntersector(std::ostringstream& s, const std::string& name) const;
+    void writeIntersector(std::ostringstream& s, const std::string& name, size_t objectIndex) const;
 
     Transform transform;
     Material material;
@@ -56,7 +65,7 @@ typedef std::vector<Plane> PlaneList;
 class Scene
 {
 public:
-    Scene(const scene::Scene& scene);
+    explicit Scene(const scene::Scene& scene);
 
     glm::vec4 backgroundColor;
 

@@ -16,7 +16,7 @@ using scene::Camera;
 class Transform
 {
 public:
-    Transform(const glm::mat4 matrix);
+    explicit Transform(const glm::mat4 matrix);
 
     glm::mat4 matrix;
     glm::mat4 invMatrix;
@@ -26,7 +26,7 @@ public:
 class Sphere
 {
 public:
-    Sphere(const scene::Sphere& sphere);
+    explicit Sphere(const scene::Sphere& sphere);
 
     Transform transform;
     Material material;
@@ -36,7 +36,7 @@ public:
 class Plane
 {
 public:
-    Plane(const scene::Plane& plane);
+    explicit Plane(const scene::Plane& plane);
 
     Transform transform;
     Material material;
@@ -48,7 +48,7 @@ typedef std::vector<Plane> PlaneList;
 class Scene
 {
 public:
-    Scene(const scene::Scene& scene);
+    explicit Scene(const scene::Scene& scene);
 
     glm::vec4 backgroundColor;
 

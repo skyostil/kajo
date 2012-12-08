@@ -65,14 +65,15 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     //
     // 1. Generate initial set of rays from camera
     // 2. Repeat:
-    // - Intersect all rays
+    // - Intersect all rays. Produces distance, normal, object index. Object
+    //   index is encoded into the length of the normal.
     // - Generate new rays based on shading
-    
+
     ASSERT_GL();
 
     Texture originTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
     Texture directionTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
-    Texture distanceTexture = createTexture(GL_TEXTURE_2D, 1, GL_R32F, image.width, image.height);
+    Texture distanceNormalTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
     ASSERT_GL();
 
     const float quadVertices[] = {
@@ -126,46 +127,48 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     std::ostringstream s;
     s << "#version 120\n" // for mat3 casts
          "varying vec2 imagePosition;\n"
-         "uniform sampler2D rayOrigin;\n"
-         "uniform sampler2D rayDirection;\n"
+         "uniform sampler2D rayOriginSampler;\n"
+         "uniform sampler2D rayDirectionSampler;\n"
          "\n";
 
+    size_t objectIndex = 0;
     for (size_t i = 0; i < m_scene->planes.size(); i++) {
         std::string name = "intersectPlane" + std::to_string(i);
-        m_scene->planes[i].writeIntersector(s, name);
+        m_scene->planes[i].writeIntersector(s, name, objectIndex++);
         s << "\n";
     }
 
     for (size_t i = 0; i < m_scene->spheres.size(); i++) {
         std::string name = "intersectSphere" + std::to_string(i);
-        m_scene->spheres[i].writeIntersector(s, name);
+        m_scene->spheres[i].writeIntersector(s, name, objectIndex++);
         s << "\n";
     }
 
     s << "void main()\n"
          "{\n"
-         "    vec3 origin = texture2D(rayOrigin, imagePosition).xyz;\n"
-         "    vec3 direction = texture2D(rayDirection, imagePosition).xyz;\n"
+         "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
+         "    vec3 direction = texture2D(rayDirectionSampler, imagePosition).xyz;\n"
          "    float minDistance = 0.0;\n"
          "    float maxDistance = 1e16;\n"
          "    vec3 normal;\n"
+         "    float objectIndex = -1.0;\n"
          "\n";
 
     for (size_t i = 0; i < m_scene->planes.size(); i++) {
         std::string name = "intersectPlane" + std::to_string(i);
-        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal);\n";
+        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal, objectIndex);\n";
     }
 
     for (size_t i = 0; i < m_scene->spheres.size(); i++) {
         std::string name = "intersectSphere" + std::to_string(i);
-        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal);\n";
+        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal, objectIndex);\n";
     }
 
     s << "\n"
-         "    gl_FragColor = vec4(abs(normal), 1.0);\n"
+         "    gl_FragColor = vec4(normal * (objectIndex + 1.0), maxDistance);\n"
          "}\n";
 
-    std::cout << s.str() << '\n';
+    //std::cout << s.str() << '\n';
 
     // Intersect rays with geometry
     Program tracerProgram(glCreateProgram());
@@ -182,21 +185,20 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     glSamplerParameteri(directionSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     ASSERT_GL();
 
-    Texture resultTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA8, image.width, image.height);
-    Framebuffer resultFramebuffer = createFramebuffer();
-    glBindFramebuffer(GL_FRAMEBUFFER, resultFramebuffer.get());
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resultTexture.get(), 0);
+    Framebuffer distanceNormalFramebuffer = createFramebuffer();
+    glBindFramebuffer(GL_FRAMEBUFFER, distanceNormalFramebuffer.get());
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, distanceNormalTexture.get(), 0);
     ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
     ASSERT_GL();
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, directionTexture.get());
-    glUniform1i(uniform(tracerProgram.get(), "rayDirection"), 1);
+    glUniform1i(uniform(tracerProgram.get(), "rayDirectionSampler"), 1);
     glBindSampler(1, directionSampler.get());
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, originTexture.get());
-    glUniform1i(uniform(tracerProgram.get(), "rayOrigin"), 0);
+    glUniform1i(uniform(tracerProgram.get(), "rayOriginSampler"), 0);
     glBindSampler(0, originSampler.get());
     ASSERT_GL();
 
@@ -209,6 +211,83 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     glUseProgram(0);
     glBindSampler(0, 0);
     glBindSampler(1, 0);
+
+    // Generate shader program
+    s.str("");
+    s << "varying vec2 imagePosition;\n"
+         "uniform sampler2D rayOriginSampler;\n"
+         "uniform sampler2D rayDirectionSampler;\n"
+         "uniform sampler2D distanceNormalSampler;\n"
+         "\n"
+         "struct Material {\n"
+         "    vec4 ambient;\n"
+         "    vec4 diffuse;\n"
+         "    vec4 specular;\n"
+         "    vec4 emission;\n"
+         "    vec4 transparency;\n"
+         "    float specularExponent;\n"
+         "    float refractiveIndex;\n"
+         "};\n"
+         "\n";
+
+    s << "void main()\n"
+         "{\n"
+         "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
+         "    vec3 direction = texture2D(rayDirectionSampler, imagePosition).xyz;\n"
+         "    vec4 distanceNormal = texture2D(distanceNormalSampler, imagePosition);\n"
+         "    vec3 normal = distanceNormal.xyz;\n"
+         "    float distance = distanceNormal.w;\n"
+         "    float objectIndex = length(normal);\n"
+         "    normal = normal / objectIndex;\n"
+         "    objectIndex = objectIndex - 1.0;\n"
+         "\n"
+         "    gl_FragColor = vec4(origin + direction * distance + normal, 1.0);\n"
+         "}\n";
+    std::cout << s.str() << '\n';
+
+    // Shade and generate new rays
+    Program shaderProgram(glCreateProgram());
+    compileProgram(shaderProgram.get(), quadVertShader, s.str(), {"position"});
+    glUseProgram(shaderProgram.get());
+    ASSERT_GL();
+
+    Texture resultTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA8, image.width, image.height);
+    Framebuffer resultFramebuffer = createFramebuffer();
+    glBindFramebuffer(GL_FRAMEBUFFER, resultFramebuffer.get());
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resultTexture.get(), 0);
+    ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
+    ASSERT_GL();
+
+    Sampler distanceNormalSampler = createSampler();
+    glSamplerParameteri(distanceNormalSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(distanceNormalSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, distanceNormalTexture.get());
+    glUniform1i(uniform(shaderProgram.get(), "distanceNormalSampler"), 2);
+    glBindSampler(2, distanceNormalSampler.get());
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, directionTexture.get());
+    glUniform1i(uniform(shaderProgram.get(), "rayDirectionSampler"), 1);
+    glBindSampler(1, directionSampler.get());
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, originTexture.get());
+    glUniform1i(uniform(shaderProgram.get(), "rayOriginSampler"), 0);
+    glBindSampler(0, originSampler.get());
+    ASSERT_GL();
+
+    glBindBuffer(GL_ARRAY_BUFFER, quadBuffer.get());
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    ASSERT_GL();
+
+    glUseProgram(0);
+    glBindSampler(0, 0);
+    glBindSampler(1, 0);
+    glBindSampler(2, 0);
 
     // Read back result
     //Framebuffer resultFramebuffer = createFramebuffer();

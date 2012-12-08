@@ -36,6 +36,8 @@ static const char initFragShader[] = SHADER(
         gl_FragData[0] = vec4(rayOrigin, 0);
         gl_FragData[1] = vec4(normalize(imageOrigin + imageRight * imagePosition.x +
                                         imageDown * imagePosition.y - rayOrigin), 0);
+        gl_FragData[2] = vec4(0.0);
+        gl_FragData[3] = vec4(1.0);
     }
 );
 
@@ -60,8 +62,8 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     // Each ray has:
     // - origin
     // - direction
-    // - weight
     // - color
+    // - weight
     //
     // 1. Generate initial set of rays from camera
     // 2. Repeat:
@@ -75,7 +77,13 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     Texture originTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
     Texture directionTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
     Texture distanceNormalTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
-    Texture colorWeightTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
+    Texture radianceTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
+    Texture weightTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
+
+    Texture newOriginTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
+    Texture newDirectionTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image.width, image.height);
+    Texture newRadianceTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
+    Texture newWeightTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image.width, image.height);
     ASSERT_GL();
 
     const float quadVertices[] = {
@@ -110,12 +118,15 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     glBindFramebuffer(GL_FRAMEBUFFER, initFramebuffer.get());
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, originTexture.get(), 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, directionTexture.get(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, radianceTexture.get(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, weightTexture.get(), 0);
     ASSERT_GL();
 
-    const GLenum attachments[] = {
-        GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1
+    const GLenum initAttachments[] = {
+        GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2,
+        GL_COLOR_ATTACHMENT3
     };
-    glDrawBuffers(2, attachments);
+    glDrawBuffers(4, initAttachments);
     ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
     ASSERT_GL();
 
@@ -172,6 +183,8 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
 
     //std::cout << s.str() << '\n';
 
+    int iteration = 0;
+again:
     // Intersect rays with geometry
     Program tracerProgram(glCreateProgram());
     compileProgram(tracerProgram.get(), quadVertShader, s.str(), {"position"});
@@ -217,10 +230,13 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     // Generate shader program
     s.str("");
     s << "#version 120\n" // for first class arrays
+         "#define M_PI 3.1415926535897932384626433832795\n"
          "varying vec2 imagePosition;\n"
          "uniform sampler2D rayOriginSampler;\n"
          "uniform sampler2D rayDirectionSampler;\n"
          "uniform sampler2D distanceNormalSampler;\n"
+         "uniform sampler2D radianceSampler;\n"
+         "uniform sampler2D weightSampler;\n"
          "\n"
          "struct Material {\n"
          "    vec4 ambient;\n"
@@ -252,11 +268,19 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     s << ");\n"
          "\n";
 
+    s << "float random(vec2 seed)\n"
+         "{\n"
+         "    return fract(sin(dot(seed.xy, vec2(12.9898, 78.233))) * 43758.5453);\n"
+         "}\n"
+         "\n";
+
     s << "void main()\n"
          "{\n"
          "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
          "    vec3 direction = texture2D(rayDirectionSampler, imagePosition).xyz;\n"
          "    vec4 distanceNormal = texture2D(distanceNormalSampler, imagePosition);\n"
+         "    vec4 radiance = texture2D(radianceSampler, imagePosition);\n"
+         "    vec4 weight = texture2D(weightSampler, imagePosition);\n"
          "    vec3 normal = distanceNormal.xyz;\n"
          "    float distance = distanceNormal.w;\n"
          "    float objectIndex = length(normal);\n"
@@ -264,8 +288,26 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
          "    objectIndex = objectIndex - 1.0 + 0.5;\n"
          "    Material material = materials[int(objectIndex)];\n"
          "\n"
-         "    gl_FragColor = vec4(origin + direction * distance + normal, 1.0);\n"
-         "    gl_FragColor = 0.001 * gl_FragColor + material.emission + (material.diffuse + material.specular) * max(0.0, -dot(direction, normal));\n"
+         //"    gl_FragColor = vec4(origin + direction * distance + normal, 1.0);\n"
+         //"    gl_FragColor = 0.001 * gl_FragColor + material.emission + (material.diffuse + material.specular) * max(0.0, -dot(direction, normal));\n"
+         "    vec3 newOrigin = origin + direction * distance;\n"
+         "\n"
+         "    float u = 2.0 * random(imagePosition + origin.xy) - 1.0;\n"
+         "    float v = random(imagePosition + origin.yx);\n"
+         "    float r = sqrt(1.0 - u * u);\n"
+         "    float theta = v * 2.0 * M_PI;\n"
+         "    vec3 newDirection = vec3(r * cos(theta), r * sin(theta), u);\n"
+         "    if (dot(newDirection, normal) < 0.0)\n"
+         "        newDirection = -newDirection;\n"
+         "\n"
+         "    vec4 newRadiance = radiance + weight * material.emission;\n"
+         "\n"
+         "    vec4 newWeight = weight * max(0.0, dot(newDirection, normal));\n"
+         "\n"
+         "    gl_FragData[0] = vec4(newOrigin, 0.0);\n"
+         "    gl_FragData[1] = vec4(newDirection, 0.0);\n"
+         "    gl_FragData[2] = newRadiance;\n"
+         "    gl_FragData[3] = newWeight;\n"
          "}\n";
     //std::cout << s.str() << '\n';
 
@@ -274,17 +316,49 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     compileProgram(shaderProgram.get(), quadVertShader, s.str(), {"position"});
     glUseProgram(shaderProgram.get());
     ASSERT_GL();
-
+/*
     Texture resultTexture = createTexture(GL_TEXTURE_2D, 1, GL_RGBA8, image.width, image.height);
     Framebuffer resultFramebuffer = createFramebuffer();
     glBindFramebuffer(GL_FRAMEBUFFER, resultFramebuffer.get());
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resultTexture.get(), 0);
     ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
     ASSERT_GL();
+*/
+    Framebuffer nextIterationFramebuffer = createFramebuffer();
+    glBindFramebuffer(GL_FRAMEBUFFER, nextIterationFramebuffer.get());
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, newOriginTexture.get(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, newDirectionTexture.get(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, newRadianceTexture.get(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, newWeightTexture.get(), 0);
+
+    const GLenum shaderAttachments[] = {
+        GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2,
+        GL_COLOR_ATTACHMENT3
+    };
+    glDrawBuffers(4, shaderAttachments);
+    ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
+    ASSERT_GL();
 
     Sampler distanceNormalSampler = createSampler();
+    Sampler radianceSampler = createSampler();
+    Sampler weightSampler = createSampler();
+
     glSamplerParameteri(distanceNormalSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glSamplerParameteri(distanceNormalSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glSamplerParameteri(radianceSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(radianceSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glSamplerParameteri(weightSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(weightSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, weightTexture.get());
+    glUniform1i(uniform(shaderProgram.get(), "weightSampler"), 4);
+    glBindSampler(4, weightSampler.get());
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, radianceTexture.get());
+    glUniform1i(uniform(shaderProgram.get(), "radianceSampler"), 3);
+    glBindSampler(3, radianceSampler.get());
 
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, distanceNormalTexture.get());
@@ -312,12 +386,24 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     glBindSampler(0, 0);
     glBindSampler(1, 0);
     glBindSampler(2, 0);
+    glBindSampler(3, 0);
+    glBindSampler(4, 0);
+
+    std::swap(originTexture, newOriginTexture);
+    std::swap(directionTexture, newDirectionTexture);
+    std::swap(radianceTexture, newRadianceTexture);
+    std::swap(weightTexture, newWeightTexture);
+
+    iteration++;
+    printf("%d\n", iteration);
+    if (iteration < 1)
+        goto again;
 
     // Read back result
-    //Framebuffer resultFramebuffer = createFramebuffer();
-    //glBindFramebuffer(GL_FRAMEBUFFER, resultFramebuffer.get());
-    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, originTexture.get(), 0);
-    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, directionTexture.get(), 0);
+    Framebuffer resultFramebuffer = createFramebuffer();
+    glBindFramebuffer(GL_FRAMEBUFFER, resultFramebuffer.get());
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, radianceTexture.get(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, originTexture.get(), 0);
 
     glPixelStorei(GL_PACK_ROW_LENGTH, image.width);
     glReadPixels(xOffset, yOffset, width, height, GL_BGRA, GL_UNSIGNED_BYTE, image.pixels.get());

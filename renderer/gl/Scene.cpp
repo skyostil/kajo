@@ -13,6 +13,39 @@ Transform::Transform(const glm::mat4 matrix):
 {
 }
 
+static void writeFloat(std::ostringstream& s, float value)
+{
+    std::string v = std::to_string(value);
+    s << v;
+    if (v.find('.') == std::string::npos)
+        s << ".0";
+}
+
+static void writeMatrix(std::ostringstream& s, const glm::mat4& m)
+{
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            writeFloat(s, m[i][j]);
+            if (i != 3 || j != 3)
+                s << ", ";
+        }
+    }
+}
+
+void Transform::writeMatrixInitializer(std::ostringstream& s) const
+{
+    s << "mat4(";
+    writeMatrix(s, matrix);
+    s << ")";
+}
+
+void Transform::writeInverseMatrixInitializer(std::ostringstream& s) const
+{
+    s << "mat4(";
+    writeMatrix(s, invMatrix);
+    s << ")";
+}
+
 Sphere::Sphere(const scene::Sphere& sphere):
     transform(sphere.transform),
     material(sphere.material),
@@ -20,10 +53,97 @@ Sphere::Sphere(const scene::Sphere& sphere):
 {
 }
 
+void Sphere::writeIntersector(std::ostringstream& s, const std::string& name) const
+{
+    s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance, inout float maxDistance, inout vec3 normal)\n";
+    s << "{\n";
+    s << "    mat4 transform = ";
+    transform.writeMatrixInitializer(s);
+    s << ";\n";
+
+    s << "    mat4 invTransform = ";
+    transform.writeInverseMatrixInitializer(s);
+    s << ";\n";
+
+    s << "    float determinant = ";
+    writeFloat(s, transform.determinant);
+    s << ";\n";
+
+    s << "    float radius2 = ";
+    writeFloat(s, radius * radius);
+    s << ";\n";
+
+    s << "    vec3 localDir = mat3(invTransform) * direction;\n"
+         "    vec3 localOrigin = (invTransform * vec4(origin, 1.0)).xyz;\n"
+         "    float a = dot(localDir, localDir);\n"
+         "    float b = 2.0 * dot(localDir, localOrigin);\n"
+         "    float c = dot(localOrigin, localOrigin) - radius2;\n"
+         "    float discr = b * b - 4.0 * a * c;\n"
+         "\n"
+         "    if (discr < 0)\n"
+         "        return;\n"
+         "\n"
+         "    float q;\n"
+         "    if (b < 0)\n"
+         "        q = (-b - sqrt(discr)) * .5;\n"
+         "    else\n"
+         "        q = (-b + sqrt(discr)) * .5;\n"
+         "\n"
+         "    float t0 = q / a;\n"
+         "    float t1 = c / q;\n"
+         "\n"
+         "    if (t0 > t1) {\n"
+         "        float tmp = t1;\n"
+         "        t1 = t0;\n"
+         "        t0 = tmp;\n"
+         "    }\n"
+         "\n"
+         "    if (t1 > 0) {\n"
+         "        if (t0 < 0)\n"
+         "            t0 = t1;\n"
+         "\n"
+         "        t0 = determinant * t0;\n"
+         "        if (t0 > minDistance && t0 < maxDistance) {\n"
+         "            maxDistance = t0;\n"
+         "            normal = localOrigin + localDir * t0;\n"
+         "            normal = normalize(mat3(transform) * normal);\n"
+         "        }\n"
+         "    }\n"
+         "}\n";
+}
+
 Plane::Plane(const scene::Plane& plane):
     transform(plane.transform),
     material(plane.material)
 {
+}
+
+void Plane::writeIntersector(std::ostringstream& s, const std::string& name) const
+{
+    s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance, inout float maxDistance, inout vec3 normal)\n";
+    s << "{\n";
+    s << "    mat4 transform = ";
+    transform.writeMatrixInitializer(s);
+    s << ";\n";
+
+    s << "    mat4 invTransform = ";
+    transform.writeInverseMatrixInitializer(s);
+    s << ";\n";
+
+    s << "    float determinant = ";
+    writeFloat(s, transform.determinant);
+    s << ";\n";
+
+    s << "    vec3 localDir = mat3(invTransform) * direction;\n"
+         "    vec3 localOrigin = (invTransform * vec4(origin, 1.0)).xyz;\n"
+         "    vec3 localNormal = vec3(0.0, 1.0, 0.0);\n"
+         "    float denom = dot(localDir, localNormal);\n"
+         "    float t = -dot(localOrigin, localNormal) / denom;\n"
+         "    if (t > minDistance && t < maxDistance) {\n"
+         "        maxDistance = t;\n"
+         "        normal = mat3(transform) * -localNormal;\n"
+         "    }\n"
+         "}\n";
 }
 
 Scene::Scene(const scene::Scene& scene):

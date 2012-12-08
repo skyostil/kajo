@@ -87,7 +87,7 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     Program initProgram(glCreateProgram());
     compileProgram(initProgram.get(), quadVertShader, initFragShader, {"position"});
     ASSERT_GL();
-    
+
     const Camera& camera = m_scene->camera;
     const glm::vec4 viewport(0, 0, 1, 1);
     glm::vec3 p1 = glm::unProject(glm::vec3(0.f, 0.f, 0.f), camera.transform, camera.projection, viewport);
@@ -122,163 +122,50 @@ void Renderer::render(Image& image, int xOffset, int yOffset, int width, int hei
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     ASSERT_GL();
 
-    // Generate tracer program
+    // Generate intersector program
     std::ostringstream s;
-    s << "#version 120\n";
-    s << SHADER(
-        varying vec2 imagePosition;
-        uniform sampler2D rayOrigin;
-        uniform sampler2D rayDirection;
+    s << "#version 120\n" // for mat3 casts
+         "varying vec2 imagePosition;\n"
+         "uniform sampler2D rayOrigin;\n"
+         "uniform sampler2D rayDirection;\n"
+         "\n";
 
-        void main()
-        {
-            vec3 origin = texture2D(rayOrigin, imagePosition).xyz;
-            vec3 direction = texture2D(rayDirection, imagePosition).xyz;
-            float minDistance = 0.0;
-            float maxDistance = 1e8;
-            //gl_FragColor = vec4(imagePosition, 0.0, 1.0);
-            gl_FragColor = vec4(0.0);
-            //gl_FragColor += vec4(abs(direction), 1.0);
-    );
-
-    for (Sphere& sphere: m_scene->spheres) {
-        s << "    {\n";
-        s << "        mat4 transform = mat4(" <<
-             sphere.transform.matrix[0][0] << ", " <<
-             sphere.transform.matrix[0][1] << ", " <<
-             sphere.transform.matrix[0][2] << ", " <<
-             sphere.transform.matrix[0][3] << ", " <<
-             sphere.transform.matrix[1][0] << ", " <<
-             sphere.transform.matrix[1][1] << ", " <<
-             sphere.transform.matrix[1][2] << ", " <<
-             sphere.transform.matrix[1][3] << ", " <<
-             sphere.transform.matrix[2][0] << ", " <<
-             sphere.transform.matrix[2][1] << ", " <<
-             sphere.transform.matrix[2][2] << ", " <<
-             sphere.transform.matrix[2][3] << ", " <<
-             sphere.transform.matrix[3][0] << ", " <<
-             sphere.transform.matrix[3][1] << ", " <<
-             sphere.transform.matrix[3][2] << ", " <<
-             sphere.transform.matrix[3][3] << ");\n";
-        s << "        mat4 invTransform = mat4(" <<
-             sphere.transform.invMatrix[0][0] << ", " <<
-             sphere.transform.invMatrix[0][1] << ", " <<
-             sphere.transform.invMatrix[0][2] << ", " <<
-             sphere.transform.invMatrix[0][3] << ", " <<
-             sphere.transform.invMatrix[1][0] << ", " <<
-             sphere.transform.invMatrix[1][1] << ", " <<
-             sphere.transform.invMatrix[1][2] << ", " <<
-             sphere.transform.invMatrix[1][3] << ", " <<
-             sphere.transform.invMatrix[2][0] << ", " <<
-             sphere.transform.invMatrix[2][1] << ", " <<
-             sphere.transform.invMatrix[2][2] << ", " <<
-             sphere.transform.invMatrix[2][3] << ", " <<
-             sphere.transform.invMatrix[3][0] << ", " <<
-             sphere.transform.invMatrix[3][1] << ", " <<
-             sphere.transform.invMatrix[3][2] << ", " <<
-             sphere.transform.invMatrix[3][3] << ");\n";
-        s << "        float determinant = " << sphere.transform.determinant << ";\n";
-        s << "        float radius2 = " << sphere.radius * sphere.radius << ";\n";
-        s << SHADER(
-                    vec3 localDir = mat3(invTransform) * direction;
-                    vec3 localOrigin = (invTransform * vec4(origin, 1.0)).xyz;
-                    float a = dot(localDir, localDir);
-                    float b = 2.0 * dot(localDir, localOrigin);
-                    float c = dot(localOrigin, localOrigin) - radius2;
-                    float discr = b * b - 4.0 * a * c;
-                    if (discr > 0) {
-                        float q;
-                        if (b < 0)
-                            q = (-b - sqrt(discr)) * .5;
-                        else
-                            q = (-b + sqrt(discr)) * .5;
-
-                        float t0 = q / a;
-                        float t1 = c / q;
-
-                        if (t0 > t1) {
-                            float tmp = t1;
-                            t1 = t0;
-                            t0 = tmp;
-                        }
-
-                        if (t1 > 0) {
-                            if (t0 < 0)
-                                t0 = t1;
-                            vec3 normal = localOrigin + localDir * t0;
-                            normal = normalize(mat3(transform) * normal);
-
-                            t0 = determinant * t0;
-                            if (t0 > minDistance && t0 < maxDistance) {
-                                maxDistance = t0;
-                                gl_FragColor = vec4(normal, 1.0);
-                            }
-                        }
-                    }
-                }
-        );
+    for (size_t i = 0; i < m_scene->planes.size(); i++) {
+        std::string name = "intersectPlane" + std::to_string(i);
+        m_scene->planes[i].writeIntersector(s, name);
+        s << "\n";
     }
 
-    for (Plane& plane: m_scene->planes) {
-        s << "    {\n";
-        s << "        mat4 transform = mat4(" <<
-             plane.transform.matrix[0][0] << ", " <<
-             plane.transform.matrix[0][1] << ", " <<
-             plane.transform.matrix[0][2] << ", " <<
-             plane.transform.matrix[0][3] << ", " <<
-             plane.transform.matrix[1][0] << ", " <<
-             plane.transform.matrix[1][1] << ", " <<
-             plane.transform.matrix[1][2] << ", " <<
-             plane.transform.matrix[1][3] << ", " <<
-             plane.transform.matrix[2][0] << ", " <<
-             plane.transform.matrix[2][1] << ", " <<
-             plane.transform.matrix[2][2] << ", " <<
-             plane.transform.matrix[2][3] << ", " <<
-             plane.transform.matrix[3][0] << ", " <<
-             plane.transform.matrix[3][1] << ", " <<
-             plane.transform.matrix[3][2] << ", " <<
-             plane.transform.matrix[3][3] << ");\n";
-        s << "        mat4 invTransform = mat4(" <<
-             plane.transform.invMatrix[0][0] << ", " <<
-             plane.transform.invMatrix[0][1] << ", " <<
-             plane.transform.invMatrix[0][2] << ", " <<
-             plane.transform.invMatrix[0][3] << ", " <<
-             plane.transform.invMatrix[1][0] << ", " <<
-             plane.transform.invMatrix[1][1] << ", " <<
-             plane.transform.invMatrix[1][2] << ", " <<
-             plane.transform.invMatrix[1][3] << ", " <<
-             plane.transform.invMatrix[2][0] << ", " <<
-             plane.transform.invMatrix[2][1] << ", " <<
-             plane.transform.invMatrix[2][2] << ", " <<
-             plane.transform.invMatrix[2][3] << ", " <<
-             plane.transform.invMatrix[3][0] << ", " <<
-             plane.transform.invMatrix[3][1] << ", " <<
-             plane.transform.invMatrix[3][2] << ", " <<
-             plane.transform.invMatrix[3][3] << ");\n";
-        s << "        float determinant = " << plane.transform.determinant << ";\n";
-        s << SHADER(
-                    vec3 localDir = mat3(invTransform) * direction;
-                    vec3 localOrigin = (invTransform * vec4(origin, 1.0)).xyz;
-                    vec3 localNormal = vec3(0.0, 1.0, 0.0);
-                    float denom = dot(localDir, localNormal);
-                    float t = -dot(localOrigin, localNormal) / denom;
-                    if (t > 0.0) {
-                        vec3 normal = mat3(transform) * -localNormal;
-                        if (t > minDistance && t < maxDistance) {
-                            maxDistance = t;
-                            gl_FragColor = vec4(t / 30.0) + vec4(normal, 1.0) / 8.0;
-                            //gl_FragColor = vec4(normal, 1.0);
-                        }
-                    }
-                }
-        );
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        std::string name = "intersectSphere" + std::to_string(i);
+        m_scene->spheres[i].writeIntersector(s, name);
+        s << "\n";
     }
 
-    s << SHADER(
-        }
-    );
+    s << "void main()\n"
+         "{\n"
+         "    vec3 origin = texture2D(rayOrigin, imagePosition).xyz;\n"
+         "    vec3 direction = texture2D(rayDirection, imagePosition).xyz;\n"
+         "    float minDistance = 0.0;\n"
+         "    float maxDistance = 1e16;\n"
+         "    vec3 normal;\n"
+         "\n";
 
-    //std::cout << s.str() << '\n';
+    for (size_t i = 0; i < m_scene->planes.size(); i++) {
+        std::string name = "intersectPlane" + std::to_string(i);
+        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal);\n";
+    }
+
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        std::string name = "intersectSphere" + std::to_string(i);
+        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal);\n";
+    }
+
+    s << "\n"
+         "    gl_FragColor = vec4(abs(normal), 1.0);\n"
+         "}\n";
+
+    std::cout << s.str() << '\n';
 
     // Intersect rays with geometry
     Program tracerProgram(glCreateProgram());

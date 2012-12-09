@@ -140,5 +140,6 @@ bool compileShader(GLuint id, const std::string& source);
 
 bool compileProgram(GLuint id, const std::string& vertSource, const std::string& fragSource,
                     const std::list<std::string>& attributes);
+GLint uniform(GLuint program, const char* name);
 
 #endif // GL_HELPERS_H

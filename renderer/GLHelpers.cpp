@@ -97,3 +97,14 @@ bool compileProgram(GLuint id, const std::string& vertSource, const std::string&
     ASSERT_GL();
     return true;
 }
+
+GLint uniform(GLuint program, const char* name)
+{
+    GLint result = glGetUniformLocation(program, name);
+    if (result == -1) {
+        std::ostringstream s;
+        s << "Unknown uniform: " << name << std::endl;
+        throw std::runtime_error(s.str());
+    }
+    return result;
+}

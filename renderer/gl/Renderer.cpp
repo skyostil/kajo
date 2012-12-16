@@ -24,6 +24,7 @@ static const char quadVertShader[] =
 
 Renderer::Renderer(const scene::Scene& scene, Image* image):
     m_scene(new Scene(scene)),
+    m_raytracer(new Raytracer(m_scene.get())),
     m_image(image),
     m_originTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
     m_directionTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
@@ -57,39 +58,26 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     m_quadBuffer = createBuffer(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
     ASSERT_GL();
 
-    const char initFragShader[] =
-        "uniform vec3 imageOrigin;\n"
-        "uniform vec3 imageRight;\n"
-        "uniform vec3 imageDown;\n"
-        "uniform vec3 rayOrigin;\n"
-        "varying vec2 imagePosition;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "    gl_FragData[0] = vec4(rayOrigin, 0);\n"
-        "    gl_FragData[1] = vec4(normalize(imageOrigin + imageRight * imagePosition.x +\n"
-        "                                    imageDown * imagePosition.y - rayOrigin), 0);\n"
-        "    gl_FragData[2] = vec4(0.0);\n"
-        "    gl_FragData[3] = vec4(1.0);\n"
-        "}\n";
+    std::ostringstream s;
+    m_raytracer->writeRayGenerator(s);
+    s << "varying vec2 imagePosition;\n"
+         "\n"
+         "void main()\n"
+         "{\n"
+         "    vec3 origin, direction;\n"
+         "    generateRay(imagePosition, origin, direction);\n"
+         "    gl_FragData[0] = vec4(origin, 0);\n"
+         "    gl_FragData[1] = vec4(direction, 0);\n"
+         "    gl_FragData[2] = vec4(0.0);\n"
+         "    gl_FragData[3] = vec4(1.0);\n"
+         "}\n";
 
     Program initProgram(glCreateProgram());
-    compileProgram(initProgram.get(), quadVertShader, initFragShader, {"position"});
+    compileProgram(initProgram.get(), quadVertShader, s.str(), {"position"});
     ASSERT_GL();
 
-    const Camera& camera = m_scene->camera;
-    const glm::vec4 viewport(0, 0, 1, 1);
-    glm::vec3 p1 = glm::unProject(glm::vec3(0.f, 0.f, 0.f), camera.transform, camera.projection, viewport);
-    glm::vec3 p2 = glm::unProject(glm::vec3(1.f, 0.f, 0.f), camera.transform, camera.projection, viewport) - p1;
-    glm::vec3 p3 = glm::unProject(glm::vec3(0.f, 1.f, 0.f), camera.transform, camera.projection, viewport) - p1;
-    glm::vec3 origin(glm::inverse(camera.transform) * glm::vec4(0.f, 0.f, 0.f, 1.f));
-
-    // Initialize origin and direction textures
     glUseProgram(initProgram.get());
-    glUniform3f(uniform(initProgram.get(), "imageOrigin"), p1.x, p1.y, p1.z);
-    glUniform3f(uniform(initProgram.get(), "imageRight"), p2.x, p2.y, p2.z);
-    glUniform3f(uniform(initProgram.get(), "imageDown"), p3.x, p3.y, p3.z);
-    glUniform3f(uniform(initProgram.get(), "rayOrigin"), origin.x, origin.y, origin.z);
+    m_raytracer->setRayGeneratorUniforms(initProgram.get());
     ASSERT_GL();
 
     Framebuffer initFramebuffer = createFramebuffer();
@@ -113,7 +101,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     glUseProgram(0);
 
     // Generate intersector program
-    std::ostringstream s;
+    s.str("");
     s << "#version 120\n" // for mat3 casts
          "varying vec2 imagePosition;\n"
          "uniform sampler2D rayOriginSampler;\n"
@@ -172,11 +160,6 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "uniform sampler2D radianceSampler;\n"
          "uniform sampler2D weightSampler;\n"
          "\n"
-         "uniform vec3 imageOrigin;\n"
-         "uniform vec3 imageRight;\n"
-         "uniform vec3 imageDown;\n"
-         "uniform vec3 rayOrigin;\n"
-         "\n"
          "struct Material {\n"
          "    vec4 ambient;\n"
          "    vec4 diffuse;\n"
@@ -187,6 +170,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "    float refractiveIndex;\n"
          "};\n"
          "\n";
+    m_raytracer->writeRayGenerator(s);
 
     s << "Material materials[" << objectIndex << "] = Material[" << objectIndex << "](\n";
     size_t materialIndex = 0;
@@ -243,9 +227,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "    vec4 newWeight = weight * (material.specular + material.diffuse) * max(0.0, dot(newDirection, normal));\n"
          "    float maxWeight = max(newWeight.x, max(newWeight.y, newWeight.z));\n"
          "    if (maxWeight < 0.01) {\n"
-         "        newOrigin = rayOrigin;\n"
-         "        newDirection = normalize(imageOrigin + imageRight * imagePosition.x +\n"
-         "                                 imageDown * imagePosition.y - rayOrigin);\n"
+         "        generateRay(imagePosition, newOrigin.xyz, newDirection.xyz);\n"
          "        newWeight = vec4(1.0);\n"
          "        radiance.w = radiance.w + 1.0;\n"
          "    }\n"
@@ -261,10 +243,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     ASSERT_GL();
 
     glUseProgram(m_shaderProgram.get());
-    glUniform3f(uniform(m_shaderProgram.get(), "imageOrigin"), p1.x, p1.y, p1.z);
-    glUniform3f(uniform(m_shaderProgram.get(), "imageRight"), p2.x, p2.y, p2.z);
-    glUniform3f(uniform(m_shaderProgram.get(), "imageDown"), p3.x, p3.y, p3.z);
-    glUniform3f(uniform(m_shaderProgram.get(), "rayOrigin"), origin.x, origin.y, origin.z);
+    m_raytracer->setRayGeneratorUniforms(m_shaderProgram.get());
     glUseProgram(0);
     ASSERT_GL();
 
@@ -306,106 +285,108 @@ void Renderer::render()
     // - Generate new rays based on shading. Produces origin, direction, color,
     //   weight.
 
-    ASSERT_GL();
+    for (int pass = 0; pass < 16; pass++) {
+        ASSERT_GL();
 
-    // Intersect rays with scene geometry
-    glUseProgram(m_tracerProgram.get());
-    glBindFramebuffer(GL_FRAMEBUFFER, m_distanceNormalFramebuffer.get());
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_distanceNormalTexture.get(), 0);
-    glViewport(0, 0, m_image->width, m_image->height);
+        // Intersect rays with scene geometry
+        glUseProgram(m_tracerProgram.get());
+        glBindFramebuffer(GL_FRAMEBUFFER, m_distanceNormalFramebuffer.get());
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_distanceNormalTexture.get(), 0);
+        glViewport(0, 0, m_image->width, m_image->height);
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, m_directionTexture.get());
-    glUniform1i(uniform(m_tracerProgram.get(), "rayDirectionSampler"), 1);
-    glBindSampler(1, m_directionSampler.get());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, m_directionTexture.get());
+        glUniform1i(uniform(m_tracerProgram.get(), "rayDirectionSampler"), 1);
+        glBindSampler(1, m_directionSampler.get());
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_originTexture.get());
-    glUniform1i(uniform(m_tracerProgram.get(), "rayOriginSampler"), 0);
-    glBindSampler(0, m_originSampler.get());
-    ASSERT_GL();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_originTexture.get());
+        glUniform1i(uniform(m_tracerProgram.get(), "rayOriginSampler"), 0);
+        glBindSampler(0, m_originSampler.get());
+        ASSERT_GL();
 
-    drawQuad();
+        drawQuad();
 
-    glUseProgram(0);
-    glBindSampler(0, 0);
-    glBindSampler(1, 0);
+        glUseProgram(0);
+        glBindSampler(0, 0);
+        glBindSampler(1, 0);
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    ASSERT_GL();
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        ASSERT_GL();
 
-    // Shade and generate new rays
-    glUseProgram(m_shaderProgram.get());
-    glBindFramebuffer(GL_FRAMEBUFFER, m_nextIterationFramebuffer.get());
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_newOriginTexture.get(), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_newDirectionTexture.get(), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, m_newRadianceTexture.get(), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, m_newWeightTexture.get(), 0);
+        // Shade and generate new rays
+        glUseProgram(m_shaderProgram.get());
+        glBindFramebuffer(GL_FRAMEBUFFER, m_nextIterationFramebuffer.get());
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_newOriginTexture.get(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_newDirectionTexture.get(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, m_newRadianceTexture.get(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, m_newWeightTexture.get(), 0);
 
-    const GLenum shaderAttachments[] = {
-        GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2,
-        GL_COLOR_ATTACHMENT3
-    };
-    glDrawBuffers(4, shaderAttachments);
-    ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
-    ASSERT_GL();
+        const GLenum shaderAttachments[] = {
+            GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2,
+            GL_COLOR_ATTACHMENT3
+        };
+        glDrawBuffers(4, shaderAttachments);
+        ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
+        ASSERT_GL();
 
-    glUniform2f(uniform(m_shaderProgram.get(), "randomSeed"), drand48(), drand48());
+        glUniform2f(uniform(m_shaderProgram.get(), "randomSeed"), drand48(), drand48());
 
-    glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, m_weightTexture.get());
-    glUniform1i(uniform(m_shaderProgram.get(), "weightSampler"), 4);
-    glBindSampler(4, m_weightSampler.get());
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, m_weightTexture.get());
+        glUniform1i(uniform(m_shaderProgram.get(), "weightSampler"), 4);
+        glBindSampler(4, m_weightSampler.get());
 
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, m_radianceTexture.get());
-    glUniform1i(uniform(m_shaderProgram.get(), "radianceSampler"), 3);
-    glBindSampler(3, m_radianceSampler.get());
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, m_radianceTexture.get());
+        glUniform1i(uniform(m_shaderProgram.get(), "radianceSampler"), 3);
+        glBindSampler(3, m_radianceSampler.get());
 
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, m_distanceNormalTexture.get());
-    glUniform1i(uniform(m_shaderProgram.get(), "distanceNormalSampler"), 2);
-    glBindSampler(2, m_distanceNormalSampler.get());
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, m_distanceNormalTexture.get());
+        glUniform1i(uniform(m_shaderProgram.get(), "distanceNormalSampler"), 2);
+        glBindSampler(2, m_distanceNormalSampler.get());
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, m_directionTexture.get());
-    glUniform1i(uniform(m_shaderProgram.get(), "rayDirectionSampler"), 1);
-    glBindSampler(1, m_directionSampler.get());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, m_directionTexture.get());
+        glUniform1i(uniform(m_shaderProgram.get(), "rayDirectionSampler"), 1);
+        glBindSampler(1, m_directionSampler.get());
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_originTexture.get());
-    glUniform1i(uniform(m_shaderProgram.get(), "rayOriginSampler"), 0);
-    glBindSampler(0, m_originSampler.get());
-    ASSERT_GL();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_originTexture.get());
+        glUniform1i(uniform(m_shaderProgram.get(), "rayOriginSampler"), 0);
+        glBindSampler(0, m_originSampler.get());
+        ASSERT_GL();
 
-    drawQuad();
+        drawQuad();
 
-    glUseProgram(0);
-    glBindSampler(0, 0);
-    glBindSampler(1, 0);
-    glBindSampler(2, 0);
-    glBindSampler(3, 0);
-    glBindSampler(4, 0);
+        glUseProgram(0);
+        glBindSampler(0, 0);
+        glBindSampler(1, 0);
+        glBindSampler(2, 0);
+        glBindSampler(3, 0);
+        glBindSampler(4, 0);
 
-    glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    ASSERT_GL();
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        ASSERT_GL();
 
-    std::swap(m_originTexture, m_newOriginTexture);
-    std::swap(m_directionTexture, m_newDirectionTexture);
-    std::swap(m_radianceTexture, m_newRadianceTexture);
-    std::swap(m_weightTexture, m_newWeightTexture);
+        std::swap(m_originTexture, m_newOriginTexture);
+        std::swap(m_directionTexture, m_newDirectionTexture);
+        std::swap(m_radianceTexture, m_newRadianceTexture);
+        std::swap(m_weightTexture, m_newWeightTexture);
+    }
 
     // Read back result
     glBindFramebuffer(GL_FRAMEBUFFER, m_radianceFramebuffer.get());

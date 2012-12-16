@@ -1,56 +1,11 @@
 // Copyright (C) 2012 Sami Kyöstilä
 #include "Scene.h"
 #include "scene/Scene.h"
+#include "ShaderUtil.h"
 
 #include <algorithm>
 
 using namespace gl;
-
-static void writeFloat(std::ostringstream& s, float value)
-{
-    std::string v = std::to_string(value);
-    s << v;
-    if (v.find('.') == std::string::npos)
-        s << ".0";
-}
-
-static void writeMatrix(std::ostringstream& s, const glm::mat4& m)
-{
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            writeFloat(s, m[i][j]);
-            if (i != 3 || j != 3)
-                s << ", ";
-        }
-    }
-}
-
-static void writeVec2(std::ostringstream& s, const glm::vec2& v)
-{
-    writeFloat(s, v.x);
-    s << ", ";
-    writeFloat(s, v.y);
-}
-
-static void writeVec3(std::ostringstream& s, const glm::vec3& v)
-{
-    writeFloat(s, v.x);
-    s << ", ";
-    writeFloat(s, v.y);
-    s << ", ";
-    writeFloat(s, v.z);
-}
-
-static void writeVec4(std::ostringstream& s, const glm::vec4& v)
-{
-    writeFloat(s, v.x);
-    s << ", ";
-    writeFloat(s, v.y);
-    s << ", ";
-    writeFloat(s, v.z);
-    s << ", ";
-    writeFloat(s, v.w);
-}
 
 Material::Material(const scene::Material& material):
     material(material)

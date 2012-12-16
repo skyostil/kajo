@@ -42,12 +42,16 @@ add_executable(
     cpu/SurfacePoint.h
 
     # OpenGL renderer
+    gl/Raytracer.cpp
+    gl/Raytracer.h
     gl/Renderer.cpp
     gl/Renderer.h
     gl/Scene.cpp
     gl/Scene.h
     gl/Scheduler.cpp
     gl/Scheduler.h
+    gl/ShaderUtil.cpp
+    gl/ShaderUtil.h
 )
 
 target_link_libraries(

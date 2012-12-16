@@ -3,6 +3,7 @@
 #define GL_RENDERER_H
 
 #include "Scene.h"
+#include "Raytracer.h"
 #include "renderer/GLHelpers.h"
 
 #include <memory>
@@ -28,6 +29,7 @@ private:
     void drawQuad();
 
     std::unique_ptr<Scene> m_scene;
+    std::unique_ptr<Raytracer> m_raytracer;
     Image* m_image;
 
     Texture m_originTexture;

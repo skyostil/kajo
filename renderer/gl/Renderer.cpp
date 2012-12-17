@@ -3,7 +3,6 @@
 #include "Renderer.h"
 #include "renderer/Image.h"
 #include "renderer/Util.h"
-#include "Scene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <sstream>
@@ -12,20 +11,12 @@
 namespace gl
 {
 
-static const char quadVertShader[] =
-    "attribute vec4 position;\n"
-    "varying vec2 imagePosition;\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    gl_Position = position;\n"
-    "    imagePosition = position.xy * 0.5 + vec2(0.5);\n"
-    "}\n";
-
 Renderer::Renderer(const scene::Scene& scene, Image* image):
-    m_scene(new Scene(scene)),
-    m_raytracer(new Raytracer(m_scene.get())),
     m_image(image),
+    m_scene(new Scene(scene)),
+    m_random(new Random()),
+    m_raytracer(new Raytracer(m_scene.get())),
+    m_shader(new SurfaceShader(m_scene.get(), m_raytracer.get(), m_random.get())),
     m_originTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
     m_directionTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
     m_distanceNormalTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image->width, image->height)),
@@ -58,16 +49,28 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     m_quadBuffer = createBuffer(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
     ASSERT_GL();
 
+    const char quadVertShader[] =
+        "attribute vec4 position;\n"
+        "varying vec2 imagePosition;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "    gl_Position = position;\n"
+        "    imagePosition = position.xy * 0.5 + vec2(0.5);\n"
+        "}\n";
+
+    // Write initialization program
     std::ostringstream s;
     m_raytracer->writeRayGenerator(s);
+
     s << "varying vec2 imagePosition;\n"
          "\n"
          "void main()\n"
          "{\n"
          "    vec3 origin, direction;\n"
          "    generateRay(imagePosition, origin, direction);\n"
-         "    gl_FragData[0] = vec4(origin, 0);\n"
-         "    gl_FragData[1] = vec4(direction, 0);\n"
+         "    gl_FragData[0] = vec4(origin, 0.0);\n"
+         "    gl_FragData[1] = vec4(direction, 0.0);\n"
          "    gl_FragData[2] = vec4(0.0);\n"
          "    gl_FragData[3] = vec4(1.0);\n"
          "}\n";
@@ -100,7 +103,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     drawQuad();
     glUseProgram(0);
 
-    // Generate intersector program
+    // Write intersector program
     s.str("");
     s << "#version 120\n" // for mat3 casts
          "varying vec2 imagePosition;\n"
@@ -108,142 +111,66 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "uniform sampler2D rayDirectionSampler;\n"
          "\n";
 
-    size_t objectIndex = 0;
-    for (size_t i = 0; i < m_scene->planes.size(); i++) {
-        std::string name = "intersectPlane" + std::to_string(i);
-        m_scene->planes[i].writeIntersector(s, name, objectIndex++);
-        s << "\n";
-    }
-
-    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
-        std::string name = "intersectSphere" + std::to_string(i);
-        m_scene->spheres[i].writeIntersector(s, name, objectIndex++);
-        s << "\n";
-    }
+    m_raytracer->writeRayIntersector(s);
 
     s << "void main()\n"
          "{\n"
          "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
          "    vec3 direction = texture2D(rayDirectionSampler, imagePosition).xyz;\n"
-         "    float minDistance = 0.0;\n"
-         "    float maxDistance = 1e16;\n"
+         "    float distance;\n"
          "    vec3 normal;\n"
-         "    float objectIndex = -1.0;\n"
-         "\n";
-
-    for (size_t i = 0; i < m_scene->planes.size(); i++) {
-        std::string name = "intersectPlane" + std::to_string(i);
-        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal, objectIndex);\n";
-    }
-
-    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
-        std::string name = "intersectSphere" + std::to_string(i);
-        s << "    " << name << "(origin, direction, minDistance, maxDistance, normal, objectIndex);\n";
-    }
-
-    s << "\n"
-         "    gl_FragData[0] = vec4(normal * (objectIndex + 1.0), maxDistance);\n"
+         "    float objectIndex;\n"
+         "\n"
+         "    intersectRay(origin, direction, distance, normal, objectIndex);\n"
+         "\n"
+         "    gl_FragData[0] = vec4(normal * (objectIndex + 1.0), distance);\n"
          "}\n";
 
     //std::cout << s.str() << '\n';
     compileProgram(m_tracerProgram.get(), quadVertShader, s.str(), {"position"});
     ASSERT_GL();
 
-    // Generate shader program
+    // Write shader program
     s.str("");
-    s << "#version 120\n" // for first class arrays
-         "#define M_PI 3.1415926535897932384626433832795\n"
-         "varying vec2 imagePosition;\n"
+    m_shader->writeSurfaceShader(s);
+
+    s << "varying vec2 imagePosition;\n"
          "uniform sampler2D rayOriginSampler;\n"
          "uniform sampler2D rayDirectionSampler;\n"
          "uniform sampler2D distanceNormalSampler;\n"
          "uniform sampler2D radianceSampler;\n"
          "uniform sampler2D weightSampler;\n"
          "\n"
-         "struct Material {\n"
-         "    vec4 ambient;\n"
-         "    vec4 diffuse;\n"
-         "    vec4 specular;\n"
-         "    vec4 emission;\n"
-         "    vec4 transparency;\n"
-         "    float specularExponent;\n"
-         "    float refractiveIndex;\n"
-         "};\n"
-         "\n";
-    m_raytracer->writeRayGenerator(s);
-
-    s << "Material materials[" << objectIndex << "] = Material[" << objectIndex << "](\n";
-    size_t materialIndex = 0;
-    for (size_t i = 0; i < m_scene->planes.size(); i++) {
-        s << "    ";
-        m_scene->planes[i].material.writeInitializer(s);
-        if (++materialIndex != objectIndex)
-            s << ",";
-        s << "\n";
-    }
-    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
-        s << "    ";
-        m_scene->spheres[i].material.writeInitializer(s);
-        if (++materialIndex != objectIndex)
-            s << ",";
-        s << "\n";
-    }
-    s << ");\n"
-         "\n";
-
-    s << "uniform vec2 randomSeed;\n"
-         "float random(vec2 position)\n"
-         "{\n"
-         "    return fract(sin(dot(randomSeed + position.xy, vec2(12.9898, 78.233))) * 43758.5453);\n"
-         "}\n"
-         "\n";
-
-    s << "void main()\n"
+         "void main()\n"
          "{\n"
          "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
          "    vec3 direction = texture2D(rayDirectionSampler, imagePosition).xyz;\n"
-         "    vec4 distanceNormal = texture2D(distanceNormalSampler, imagePosition * vec2(1, 1));\n"
+         "    vec4 distanceNormal = texture2D(distanceNormalSampler, imagePosition);\n"
          "    vec4 radiance = texture2D(radianceSampler, imagePosition);\n"
          "    vec4 weight = texture2D(weightSampler, imagePosition);\n"
+         "\n"
          "    vec3 normal = distanceNormal.xyz;\n"
          "    float distance = distanceNormal.w;\n"
          "    float objectIndex = length(normal);\n"
          "    normal = normal / objectIndex;\n"
          "    objectIndex = objectIndex - 1.0 + 0.5;\n"
-         "    Material material = materials[int(objectIndex)];\n"
          "\n"
-         "    vec3 newOrigin = origin + direction * distance;\n"
+         "    shadeSurfacePoint(origin, direction, distance, normal, int(objectIndex),\n"
+         "                      imagePosition, radiance, weight);\n"
          "\n"
-         "    float u = 2.0 * random(imagePosition + origin.xy) - 1.0;\n"
-         "    float v = random(imagePosition + origin.yx);\n"
-         "    float r = sqrt(1.0 - u * u);\n"
-         "    float theta = v * 2.0 * M_PI;\n"
-         "    vec3 newDirection = vec3(r * cos(theta), r * sin(theta), u);\n"
-         "    if (dot(newDirection, normal) < 0.0)\n"
-         "        newDirection = -newDirection;\n"
-         "\n"
-         "    vec4 newRadiance = radiance + vec4(weight.xyz, 1.0) * material.emission;\n"
-         "\n"
-         "    vec4 newWeight = weight * (material.specular + material.diffuse) * max(0.0, dot(newDirection, normal));\n"
-         "    float maxWeight = max(newWeight.x, max(newWeight.y, newWeight.z));\n"
-         "    if (maxWeight < 0.01) {\n"
-         "        generateRay(imagePosition, newOrigin.xyz, newDirection.xyz);\n"
-         "        newWeight = vec4(1.0);\n"
-         "        radiance.w = radiance.w + 1.0;\n"
-         "    }\n"
-         "\n"
-         "    gl_FragData[0] = vec4(newOrigin + newDirection * 0.001, 0.0);\n"
-         "    gl_FragData[1] = vec4(newDirection, 0.0);\n"
-         "    gl_FragData[2] = vec4(newRadiance.xyz, radiance.w);\n"
-         "    gl_FragData[3] = newWeight;\n"
+         "    gl_FragData[0] = vec4(origin, 0.0);\n"
+         "    gl_FragData[1] = vec4(direction, 0.0);\n"
+         "    gl_FragData[2] = radiance;\n"
+         "    gl_FragData[3] = weight;\n"
          "}\n";
-    //std::cout << s.str() << '\n';
+
+    std::cout << s.str();
 
     compileProgram(m_shaderProgram.get(), quadVertShader, s.str(), {"position"});
     ASSERT_GL();
 
     glUseProgram(m_shaderProgram.get());
-    m_raytracer->setRayGeneratorUniforms(m_shaderProgram.get());
+    m_shader->setSurfaceShaderUniforms(m_shaderProgram.get());
     glUseProgram(0);
     ASSERT_GL();
 
@@ -282,10 +209,10 @@ void Renderer::render()
     // 2. Repeat:
     // - Intersect all rays. Produces distance, normal, object index. Object
     //   index is encoded into the length of the normal.
-    // - Generate new rays based on shading. Produces origin, direction, color,
-    //   weight.
+    // - Generate new rays based on shading. Produces origin, direction,
+    //   radiance, weight.
 
-    for (int pass = 0; pass < 16; pass++) {
+    for (int pass = 0; pass < 1; pass++) {
         ASSERT_GL();
 
         // Intersect rays with scene geometry
@@ -319,6 +246,7 @@ void Renderer::render()
 
         // Shade and generate new rays
         glUseProgram(m_shaderProgram.get());
+        m_shader->setSurfaceShaderUniforms(m_shaderProgram.get());
         glBindFramebuffer(GL_FRAMEBUFFER, m_nextIterationFramebuffer.get());
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_newOriginTexture.get(), 0);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_newDirectionTexture.get(), 0);
@@ -332,8 +260,6 @@ void Renderer::render()
         glDrawBuffers(4, shaderAttachments);
         ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
         ASSERT_GL();
-
-        glUniform2f(uniform(m_shaderProgram.get(), "randomSeed"), drand48(), drand48());
 
         glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_2D, m_weightTexture.get());
@@ -401,6 +327,8 @@ void Renderer::render()
     for (int y = 0; y < m_image->height; y++) {
         for (int x = 0; x < m_image->width; x++) {
             glm::vec4 radiance = m_radianceMap[y * m_image->width + x];
+            if (!radiance.w)
+                continue;
             radiance.r /= radiance.w;
             radiance.g /= radiance.w;
             radiance.b /= radiance.w;

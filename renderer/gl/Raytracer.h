@@ -19,6 +19,8 @@ public:
     void writeRayGenerator(std::ostringstream& s) const;
     void setRayGeneratorUniforms(GLuint program) const;
 
+    void writeRayIntersector(std::ostringstream& s) const;
+
 private:
 
     Scene* m_scene;

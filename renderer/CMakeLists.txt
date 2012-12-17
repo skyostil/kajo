@@ -44,6 +44,8 @@ add_executable(
     # OpenGL renderer
     gl/Raytracer.cpp
     gl/Raytracer.h
+    gl/Random.cpp
+    gl/Random.h
     gl/Renderer.cpp
     gl/Renderer.h
     gl/Scene.cpp
@@ -52,6 +54,8 @@ add_executable(
     gl/Scheduler.h
     gl/ShaderUtil.cpp
     gl/ShaderUtil.h
+    gl/SurfaceShader.cpp
+    gl/SurfaceShader.h
 )
 
 target_link_libraries(

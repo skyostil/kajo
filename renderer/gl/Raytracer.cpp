@@ -45,3 +45,39 @@ void Raytracer::setRayGeneratorUniforms(GLuint program) const
     glUniform3f(uniform(program, "rayOrigin"), origin.x, origin.y, origin.z);
     ASSERT_GL();
 }
+
+void Raytracer::writeRayIntersector(std::ostringstream& s) const
+{
+    size_t objectIndex = 0;
+    for (size_t i = 0; i < m_scene->planes.size(); i++) {
+        std::string name = "intersectPlane" + std::to_string(i);
+        m_scene->planes[i].writeIntersector(s, name, objectIndex++);
+        s << "\n";
+    }
+
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        std::string name = "intersectSphere" + std::to_string(i);
+        m_scene->spheres[i].writeIntersector(s, name, objectIndex++);
+        s << "\n";
+    }
+
+    s << "void intersectRay(vec3 origin, vec3 direction, out float distance, out vec3 normal, out float objectIndex)\n"
+         "{\n"
+         "    float maxDistance = 1e16;\n"
+         "    objectIndex = -1.0;\n"
+         "    distance = 0.0;\n"
+         "\n";
+
+    for (size_t i = 0; i < m_scene->planes.size(); i++) {
+        std::string name = "intersectPlane" + std::to_string(i);
+        s << "    " << name << "(origin, direction, distance, maxDistance, normal, objectIndex);\n";
+    }
+
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        std::string name = "intersectSphere" + std::to_string(i);
+        s << "    " << name << "(origin, direction, distance, maxDistance, normal, objectIndex);\n";
+    }
+
+    s << "}\n"
+         "\n";
+}

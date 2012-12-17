@@ -4,6 +4,8 @@
 
 #include "Scene.h"
 #include "Raytracer.h"
+#include "SurfaceShader.h"
+#include "Random.h"
 #include "renderer/GLHelpers.h"
 
 #include <memory>
@@ -28,9 +30,12 @@ public:
 private:
     void drawQuad();
 
-    std::unique_ptr<Scene> m_scene;
-    std::unique_ptr<Raytracer> m_raytracer;
     Image* m_image;
+
+    std::unique_ptr<Scene> m_scene;
+    std::unique_ptr<Random> m_random;
+    std::unique_ptr<Raytracer> m_raytracer;
+    std::unique_ptr<SurfaceShader> m_shader;
 
     Texture m_originTexture;
     Texture m_directionTexture;

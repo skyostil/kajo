@@ -56,7 +56,9 @@ bool compileShader(GLuint id, const std::string& source)
     GLint status;
     glGetShaderiv(id, GL_COMPILE_STATUS, &status);
     if (status != GL_TRUE) {
-        std::cerr << "Shader compilation failed: " << infoLog << std::endl;
+        std::cerr << "Shader compilation failed:" << std::endl;
+        std::cerr << source << std::endl;
+        std::cerr << infoLog << std::endl;
         return false;
     }
     return true;

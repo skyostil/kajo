@@ -110,7 +110,8 @@ float Shader::calculateLightProbabilities(const std::vector<ObjectType>& objects
     return totalPdf;
 }
 
-glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int depth, LightSamplingScheme lightSamplingScheme) const
+glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int depth,
+                        LightSamplingScheme lightSamplingScheme) const
 {
     if (!surfacePoint.valid() || !surfacePoint.material)
         return m_scene->backgroundColor;
@@ -120,7 +121,8 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
     glm::vec4 radiance = (lightSamplingScheme == SampleAllObjects) ? material->emission : glm::vec4();
 
     // Terminate path with Russian roulette
-    auto shouldContinue = random.russianRoulette(glm::max(glm::max(material->diffuse, material->specular), material->transparency));
+    auto shouldContinue = random.russianRoulette(
+            glm::max(glm::max(material->diffuse, material->specular), material->transparency));
     if (!shouldContinue.value || depth >= g_depthLimit)
         return 1 / shouldContinue.probability * radiance;
 

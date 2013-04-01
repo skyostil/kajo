@@ -117,9 +117,9 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "{\n"
          "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
          "    vec3 direction = texture2D(rayDirectionSampler, imagePosition).xyz;\n"
-         "    float distance;\n"
-         "    vec3 normal;\n"
-         "    float objectIndex;\n"
+         "    float distance = -1.0;\n"
+         "    vec3 normal = vec3(0.0);\n"
+         "    float objectIndex = 0.0;\n"
          "\n"
          "    intersectRay(origin, direction, distance, normal, objectIndex);\n"
          "\n"
@@ -212,7 +212,7 @@ void Renderer::render()
     // - Generate new rays based on shading. Produces origin, direction,
     //   radiance, weight.
 
-    for (int pass = 0; pass < 1; pass++) {
+    for (int pass = 0; pass < 8; pass++) {
         ASSERT_GL();
 
         // Intersect rays with scene geometry
@@ -336,8 +336,6 @@ void Renderer::render()
             radiance.a = 1;
             uint32_t pixel = Image::colorToRGBA8(radiance);
             m_image->pixels[(m_image->height - 1 - y) * m_image->width + x] = pixel;
-            //std::swap(m_image->pixels[y * m_image->width + x],
-            //            m_image->pixels[(m_image->height - 1 - y) * m_image->width + x]);
         }
     }
 

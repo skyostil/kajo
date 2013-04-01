@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <sstream>
+#include <cstddef>
 
 #define ASSERT_GL() \
     do \
@@ -48,11 +49,28 @@
 
 #define SHADER(X) #X
 
+class GLObject
+{
+public:
+    GLObject();
+    GLObject(std::nullptr_t);
+    GLObject(GLuint name);
+
+    GLObject& operator=(std::nullptr_t);
+    operator GLuint() const;
+    explicit operator bool() const;
+
+    GLuint name;
+};
+
+bool operator==(GLObject lhs, GLObject rhs);
+bool operator!=(GLObject lhs, GLObject rhs);
+
 template <void (*F)(GLsizei, const GLuint*)>
 class GLDeleter
 {
 public:
-    typedef GLuint pointer;
+    typedef GLObject pointer;
 
     void operator()(GLuint id)
     {
@@ -64,7 +82,7 @@ public:
 class GLShaderDeleter
 {
 public:
-    typedef GLuint pointer;
+    typedef GLObject pointer;
 
     void operator()(GLuint id)
     {
@@ -76,7 +94,7 @@ public:
 class GLProgramDeleter
 {
 public:
-    typedef GLuint pointer;
+    typedef GLObject pointer;
 
     void operator()(GLuint id)
     {
@@ -88,7 +106,7 @@ public:
 class GLFramebufferDeleter
 {
 public:
-    typedef GLuint pointer;
+    typedef GLObject pointer;
 
     void operator()(GLuint id)
     {
@@ -100,7 +118,7 @@ public:
 class GLBufferDeleter
 {
 public:
-    typedef GLuint pointer;
+    typedef GLObject pointer;
 
     void operator()(GLuint id)
     {
@@ -112,7 +130,7 @@ public:
 class GLSamplerDeleter
 {
 public:
-    typedef GLuint pointer;
+    typedef GLObject pointer;
 
     void operator()(GLuint id)
     {

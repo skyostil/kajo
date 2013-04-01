@@ -2,6 +2,45 @@
 
 #include "GLHelpers.h"
 
+GLObject::GLObject(): name(0)
+{
+}
+
+GLObject::GLObject(std::nullptr_t): name(0)
+{
+}
+
+GLObject::GLObject(GLuint name): name(name)
+{
+}
+
+GLObject& GLObject::operator=(std::nullptr_t)
+{
+    name = 0;
+    return *this;
+}
+
+GLObject::operator GLuint() const
+{
+    return name;
+}
+
+GLObject::operator bool() const
+{
+    return name != 0;
+}
+
+bool operator==(GLObject lhs, GLObject rhs)
+{
+    return lhs.name == rhs.name;
+
+}
+
+bool operator!=(GLObject lhs, GLObject rhs)
+{
+    return lhs.name != rhs.name;
+}
+
 Texture createTexture(GLenum target, int levels, GLenum internalFormat, int width, int height)
 {
     GLuint id;

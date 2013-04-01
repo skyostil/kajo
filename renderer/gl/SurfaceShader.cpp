@@ -2,6 +2,7 @@
 
 #include "SurfaceShader.h"
 #include "Scene.h"
+#include "Light.h"
 #include "Raytracer.h"
 #include "Random.h"
 #include "renderer/GLHelpers.h"
@@ -22,41 +23,12 @@ void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
 {
     s << "#version 120\n" // for first class arrays
          "#define M_PI 3.1415926535897932384626433832795\n"
-         "\n"
-         "struct Material {\n"
-         "    vec4 ambient;\n"
-         "    vec4 diffuse;\n"
-         "    vec4 specular;\n"
-         "    vec4 emission;\n"
-         "    vec4 transparency;\n"
-         "    float specularExponent;\n"
-         "    float refractiveIndex;\n"
-         "};\n"
          "\n";
 
     m_random->writeRandomNumberGenerator(s);
     m_raytracer->writeRayGenerator(s);
-
-    size_t objectCount = m_scene->spheres.size() + m_scene->planes.size();
-    size_t materialIndex = 0;
-
-    s << "Material materials[" << objectCount << "] = Material[" << objectCount << "](\n";
-    for (size_t i = 0; i < m_scene->planes.size(); i++) {
-        s << "    ";
-        m_scene->planes[i].material.writeInitializer(s);
-        if (++materialIndex != objectCount)
-            s << ",";
-        s << "\n";
-    }
-    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
-        s << "    ";
-        m_scene->spheres[i].material.writeInitializer(s);
-        if (++materialIndex != objectCount)
-            s << ",";
-        s << "\n";
-    }
-    s << ");\n"
-         "\n";
+    writeMaterials(s);
+    writeLights(s);
 
     s << "void shadeSurfacePoint(inout vec3 origin, inout vec3 direction, float distance, vec3 normal,\n"
          "                       int objectIndex, vec2 imagePosition, inout vec4 radiance, inout vec4 weight)\n"
@@ -90,6 +62,67 @@ void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
          "    weight = newWeight;\n"
          "}\n"
          "\n";
+}
+
+void SurfaceShader::writeMaterials(std::ostringstream& s) const
+{
+    size_t objectCount = m_scene->spheres.size() + m_scene->planes.size();
+    size_t materialIndex = 0;
+
+    s << "struct Material {\n"
+         "    vec4 ambient;\n"
+         "    vec4 diffuse;\n"
+         "    vec4 specular;\n"
+         "    vec4 emission;\n"
+         "    vec4 transparency;\n"
+         "    float specularExponent;\n"
+         "    float refractiveIndex;\n"
+         "};\n"
+         "\n";
+
+    s << "Material materials[" << objectCount << "] = Material[" << objectCount << "](\n";
+    for (size_t i = 0; i < m_scene->planes.size(); i++) {
+        s << "    ";
+        m_scene->planes[i].material.writeInitializer(s);
+        if (++materialIndex != objectCount)
+            s << ",";
+        s << "\n";
+    }
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        s << "    ";
+        m_scene->spheres[i].material.writeInitializer(s);
+        if (++materialIndex != objectCount)
+            s << ",";
+        s << "\n";
+    }
+    s << ");\n"
+         "\n";
+}
+
+void SurfaceShader::writeLights(std::ostringstream& s) const
+{
+    SphericalLight::writeCommon(s);
+    s << "\n";
+
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        if (m_scene->spheres[i].material.material.emission == glm::vec4())
+            continue;
+
+        SphericalLight light(&m_scene->spheres[i]);
+
+        std::string name = "generateLight" + std::to_string(i) + "Sample";
+        light.writeSampleGenerator(s, name);
+        s << "\n";
+
+        name = "evaluateLight" + std::to_string(i) + "Sample";
+        light.writeSampleEvaluator(s, name);
+        s << "\n";
+
+        name = "light" + std::to_string(i) + "SampleProbability";
+        light.writeSampleProbability(s, name);
+        s << "\n";
+    }
+    s << "\n";
 }
 
 void SurfaceShader::setSurfaceShaderUniforms(GLuint program) const

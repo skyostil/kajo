@@ -22,6 +22,8 @@ public:
     void setSurfaceShaderUniforms(GLuint program) const;
 
 private:
+    void writeMaterials(std::ostringstream& s) const;
+    void writeLights(std::ostringstream& s) const;
 
     Scene* m_scene;
     Raytracer* m_raytracer;

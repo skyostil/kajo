@@ -42,6 +42,8 @@ add_executable(
     cpu/SurfacePoint.h
 
     # OpenGL renderer
+    gl/Light.cpp
+    gl/Light.h
     gl/Raytracer.cpp
     gl/Raytracer.h
     gl/Random.cpp

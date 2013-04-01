@@ -123,6 +123,38 @@ void SurfaceShader::writeLights(std::ostringstream& s) const
         s << "\n";
     }
     s << "\n";
+
+    s << "vec4 sampleLights(vec3 surfacePos)\n"
+         "{\n"
+         "    vec4 radiance = vec4(0.0);\n";
+
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        if (m_scene->spheres[i].material.material.emission == glm::vec4())
+            continue;
+
+        s << "    {\n"
+             "        vec3 direction;\n"
+             "        float lightProbability;\n"
+             "        generateLight" << i << "Sample(surfacePos, direction, lightProbability);\n"
+             "        if (lightProbability > 0.0) {\n"
+             "            vec3 origin = surfacePos + direction * 0.001;\n"
+             "            float distance;\n"
+             "            vec3 normal;\n"
+             "            float objectIndex;\n"
+             "            intersectRay(origin, direction, distance, normal, objectIndex);\n"
+             "            if (objectIndex == float(" << i << ") {\n"
+             "                float bsdfProbability = 0.0;\n"
+             "                radiance += \n"
+             "                    1.0 / (bsdfProbability + lightProbability) *\n"
+             "                    /* bsdf todo */\n"
+             "                    max(0.0, dot(normal, direction)) *\n"
+             "                    evaluateLight" << i << "Sample(surfacePos);\n"
+             "            }\n"
+             "        }\n"
+             "    }\n";
+    }
+    s << "}\n";
+    s << "\n";
 }
 
 void SurfaceShader::setSurfaceShaderUniforms(GLuint program) const

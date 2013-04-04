@@ -56,6 +56,18 @@ void Raytracer::setRayGeneratorUniforms(GLuint program) const
 
 void Raytracer::writeRayIntersector(std::ostringstream& s) const
 {
+    s << "struct SurfacePoint {\n"
+         "    float objectIndex;\n"
+         "    float minDistance;\n"
+         "    float maxDistance;\n"
+         "    vec3 position;\n"
+         "    vec3 view;\n"
+         "    vec3 normal;\n"
+         "    vec3 tangent;\n"
+         "    vec3 binormal;\n"
+         "};\n"
+         "\n";
+
     size_t objectIndex = 0;
     for (size_t i = 0; i < m_scene->planes.size(); i++) {
         std::string name = "intersectPlane" + std::to_string(i);
@@ -69,33 +81,38 @@ void Raytracer::writeRayIntersector(std::ostringstream& s) const
         s << "\n";
     }
 
-    s << "void intersectRay(vec3 origin, vec3 direction, out float distance, out vec3 normal, out float objectIndex)\n"
+    s << "SurfacePoint traceRay(vec3 origin, vec3 direction)\n"
          "{\n"
-         "    float minDistance = 0.0;\n"
-         "    objectIndex = -1.0;\n"
-         "    distance = 1e16;\n"
+         "    SurfacePoint result;\n"
+         "    result.minDistance = 0.0;\n"
+         "    result.objectIndex = -1.0;\n"
+         "    result.maxDistance = 1e16;\n"
          "\n";
 
     for (size_t i = 0; i < m_scene->planes.size(); i++) {
         std::string name = "intersectPlane" + std::to_string(i);
-        s << "    " << name << "(origin, direction, minDistance, distance, normal, objectIndex);\n";
+        s << "    " << name << "(origin, direction, result.minDistance, "
+                               "result.maxDistance, result.normal, "
+                               "result.objectIndex);\n";
     }
 
     for (size_t i = 0; i < m_scene->spheres.size(); i++) {
         std::string name = "intersectSphere" + std::to_string(i);
-        s << "    " << name << "(origin, direction, minDistance, distance, normal, objectIndex);\n";
+        s << "    " << name << "(origin, direction, result.minDistance, "
+                               "result.maxDistance, result.normal, "
+                               "result.objectIndex);\n";
     }
 
-    s << "}\n"
+    s << "    result.view = direction;\n"
+         "    result.position = direction * result.maxDistance;\n"
+         "    return result;\n"
+         "}\n"
          "\n";
 
-    s << "int findHitObject(vec3 origin, vec3 direction)\n"
+    s << "bool rayCanReach(vec3 origin, vec3 direction, int objectIndex)\n"
          "{\n"
-         "    float unusedDistance;\n"
-         "    vec3 unusedNormal;\n"
-         "    float objectIndex;\n"
-         "    intersectRay(origin, direction, unusedDistance, unusedNormal, objectIndex);\n"
-         "    return int(objectIndex);\n"
+         "    SurfacePoint result = traceRay(origin, direction);\n"
+         "    return int(result.objectIndex) == objectIndex;\n"
          "}\n"
          "\n";
 }

@@ -173,3 +173,13 @@ Scene::Scene(const scene::Scene& scene):
     for (const scene::Plane& plane: scene.planes)
         planes.push_back(Plane(plane));
 }
+
+size_t Scene::objectIndex(const Plane& plane) const
+{
+    return &plane - &planes[0];
+}
+
+size_t Scene::objectIndex(const Sphere& sphere) const
+{
+    return planes.size() + &sphere - &spheres[0];
+}

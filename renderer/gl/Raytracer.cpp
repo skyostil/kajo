@@ -80,4 +80,14 @@ void Raytracer::writeRayIntersector(std::ostringstream& s) const
 
     s << "}\n"
          "\n";
+
+    s << "int findHitObject(vec3 origin, vec3 direction)\n"
+         "{\n"
+         "    float unusedDistance;\n"
+         "    vec3 unusedNormal;\n"
+         "    float objectIndex;\n"
+         "    intersectRay(origin, direction, unusedDistance, unusedNormal, objectIndex);\n"
+         "    return int(objectIndex);\n"
+         "}\n"
+         "\n";
 }

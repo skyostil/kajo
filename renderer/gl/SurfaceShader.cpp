@@ -21,8 +21,7 @@ SurfaceShader::SurfaceShader(Scene* scene, Raytracer* raytracer, Random* random)
 
 void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
 {
-    s << "#version 120\n" // for first class arrays
-         "#define M_PI 3.1415926535897932384626433832795\n"
+    s << "#define M_PI 3.1415926535897932384626433832795\n"
          "\n";
 
     m_random->writeRandomNumberGenerator(s);
@@ -46,6 +45,7 @@ void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
          "        newDirection = -newDirection;\n"
          "\n"
          "    vec4 newRadiance = radiance + weight * material.emission;\n"
+         "    newRadiance += weight * (material.specular + material.diffuse) * sampleLights(newOrigin, normal) * 0.01;\n"
          "    newRadiance.w = radiance.w;\n"
          "\n"
          "    vec4 newWeight = weight * (material.specular + material.diffuse) * max(0.0, dot(newDirection, normal));\n"
@@ -109,22 +109,22 @@ void SurfaceShader::writeLights(std::ostringstream& s) const
             continue;
 
         SphericalLight light(&m_scene->spheres[i]);
+        size_t objectIndex = m_scene->objectIndex(m_scene->spheres[i]);
 
-        std::string name = "generateLight" + std::to_string(i) + "Sample";
+        std::string name = "generateLight" + std::to_string(objectIndex) + "Sample";
         light.writeSampleGenerator(s, name);
         s << "\n";
 
-        name = "evaluateLight" + std::to_string(i) + "Sample";
+        name = "evaluateLight" + std::to_string(objectIndex) + "Sample";
         light.writeSampleEvaluator(s, name);
         s << "\n";
 
-        name = "light" + std::to_string(i) + "SampleProbability";
+        name = "light" + std::to_string(objectIndex) + "SampleProbability";
         light.writeSampleProbability(s, name);
         s << "\n";
     }
-    s << "\n";
 
-    s << "vec4 sampleLights(vec3 surfacePos)\n"
+    s << "vec4 sampleLights(vec3 surfacePos, vec3 normal)\n"
          "{\n"
          "    vec4 radiance = vec4(0.0);\n";
 
@@ -132,29 +132,28 @@ void SurfaceShader::writeLights(std::ostringstream& s) const
         if (m_scene->spheres[i].material.material.emission == glm::vec4())
             continue;
 
+        size_t objectIndex = m_scene->objectIndex(m_scene->spheres[i]);
         s << "    {\n"
              "        vec3 direction;\n"
              "        float lightProbability;\n"
-             "        generateLight" << i << "Sample(surfacePos, direction, lightProbability);\n"
+             "        generateLight" << objectIndex << "Sample(surfacePos, direction, lightProbability);\n"
              "        if (lightProbability > 0.0) {\n"
              "            vec3 origin = surfacePos + direction * 0.001;\n"
-             "            float distance;\n"
-             "            vec3 normal;\n"
-             "            float objectIndex;\n"
-             "            intersectRay(origin, direction, distance, normal, objectIndex);\n"
-             "            if (objectIndex == float(" << i << ") {\n"
+             "            int objectIndex = findHitObject(origin, direction);\n"
+             "            if (objectIndex == " << objectIndex << ") {\n"
              "                float bsdfProbability = 0.0;\n"
              "                radiance += \n"
              "                    1.0 / (bsdfProbability + lightProbability) *\n"
              "                    /* bsdf todo */\n"
              "                    max(0.0, dot(normal, direction)) *\n"
-             "                    evaluateLight" << i << "Sample(surfacePos);\n"
+             "                    evaluateLight" << objectIndex << "Sample(surfacePos, direction);\n"
              "            }\n"
              "        }\n"
              "    }\n";
     }
-    s << "}\n";
-    s << "\n";
+    s << "    return radiance;\n"
+         "}\n"
+         "\n";
 }
 
 void SurfaceShader::setSurfaceShaderUniforms(GLuint program) const

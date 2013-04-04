@@ -67,6 +67,9 @@ class Scene
 public:
     explicit Scene(const scene::Scene& scene);
 
+    size_t objectIndex(const Plane& plane) const;
+    size_t objectIndex(const Sphere& sphere) const;
+
     glm::vec4 backgroundColor;
 
     Camera camera;

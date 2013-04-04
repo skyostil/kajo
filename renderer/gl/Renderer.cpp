@@ -132,6 +132,8 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
 
     // Write shader program
     s.str("");
+    s << "#version 120\n"; // for first class arrays
+    m_raytracer->writeRayIntersector(s);
     m_shader->writeSurfaceShader(s);
 
     s << "varying vec2 imagePosition;\n"

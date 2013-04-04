@@ -5,6 +5,7 @@
 #include "Light.h"
 #include "Raytracer.h"
 #include "Random.h"
+#include "BSDF.h"
 #include "renderer/GLHelpers.h"
 
 #include <glm/glm.hpp>
@@ -21,13 +22,11 @@ SurfaceShader::SurfaceShader(Scene* scene, Raytracer* raytracer, Random* random)
 
 void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
 {
-    s << "#define M_PI 3.1415926535897932384626433832795\n"
-         "\n";
-
     m_random->writeRandomNumberGenerator(s);
     m_raytracer->writeRayGenerator(s);
     writeMaterials(s);
     writeLights(s);
+    BSDF::writeBSDFFunctions(s);
 
     s << "void shadeSurfacePoint(inout SurfacePoint surfacePoint,\n"
          "                       vec2 imagePosition, inout vec4 radiance,\n"

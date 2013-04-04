@@ -61,6 +61,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
 
     // Write initialization program
     std::ostringstream s;
+    m_random->writeRandomNumberGenerator(s);
     m_raytracer->writeRayGenerator(s);
 
     s << "varying vec2 imagePosition;\n"

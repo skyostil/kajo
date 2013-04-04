@@ -22,7 +22,7 @@ void SphericalLight::writeCommon(std::ostringstream& s)
 
 void SphericalLight::writeSampleGenerator(std::ostringstream& s, const std::string& name) const
 {
-    s << "void " << name << "(vec3 surfacePos, out vec3 direction, out float probability)\n"
+    s << "RandomVec3 " << name << "(vec3 surfacePos)\n"
          "{\n"
          "    float s1 = random(surfacePos.xy);\n"
          "    float s2 = random(surfacePos.yz);\n"
@@ -46,8 +46,10 @@ void SphericalLight::writeSampleGenerator(std::ostringstream& s, const std::stri
          "    float y = radius * sqrt(s1) * sin(2.0 * M_PI * s2);\n"
          "    float z = sqrt(radius2 - x * x - y * y) * sin(M_PI * (s3 - .5));\n"
          "\n"
-         "    direction = normalize(lightPos + vec3(x, y, z) - surfacePos);\n"
-         "    probability = 1.0 / solidAngle(radius, lightPos, surfacePos);\n"
+         "    RandomVec3 result;\n"
+         "    result.value = normalize(lightPos + vec3(x, y, z) - surfacePos);\n"
+         "    result.probability = 1.0 / solidAngle(radius, lightPos, surfacePos);\n"
+         "    return result;\n"
          "}\n";
 }
 

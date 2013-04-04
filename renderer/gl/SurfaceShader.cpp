@@ -25,8 +25,8 @@ void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
     m_random->writeRandomNumberGenerator(s);
     m_raytracer->writeRayGenerator(s);
     writeMaterials(s);
-    writeLights(s);
     BSDF::writeBSDFFunctions(s);
+    writeLights(s);
 
     s << "void shadeSurfacePoint(inout SurfacePoint surfacePoint,\n"
          "                       vec2 imagePosition, inout vec4 radiance,\n"
@@ -43,7 +43,7 @@ void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
          "        newDirection = -newDirection;\n"
          "\n"
          "    vec4 newRadiance = radiance + weight * material.emission;\n"
-         "    newRadiance += weight * (material.specular + material.diffuse) * sampleLights(surfacePoint.position, surfacePoint.normal) * 0.01;\n"
+         "    newRadiance += weight * (material.specular + material.diffuse) * sampleLights(surfacePoint, material) * 0.01;\n"
          "    newRadiance.w = radiance.w;\n"
          "\n"
          "    vec4 newWeight = weight * (material.specular + material.diffuse) * max(0.0, dot(newDirection, surfacePoint.normal));\n"
@@ -122,7 +122,7 @@ void SurfaceShader::writeLights(std::ostringstream& s) const
         s << "\n";
     }
 
-    s << "vec4 sampleLights(vec3 surfacePos, vec3 normal)\n"
+    s << "vec4 sampleLights(SurfacePoint surfacePoint, Material material)\n"
          "{\n"
          "    vec4 radiance = vec4(0.0);\n";
 
@@ -132,18 +132,16 @@ void SurfaceShader::writeLights(std::ostringstream& s) const
 
         size_t objectIndex = m_scene->objectIndex(m_scene->spheres[i]);
         s << "    {\n"
-             "        vec3 direction;\n"
-             "        float lightProbability;\n"
-             "        generateLight" << objectIndex << "Sample(surfacePos, direction, lightProbability);\n"
-             "        if (lightProbability > 0.0) {\n"
-             "            vec3 origin = surfacePos + direction * 0.001;\n"
-             "            if (rayCanReach(origin, direction, " << objectIndex << ")) {\n"
-             "                float bsdfProbability = 0.0;\n"
+             "        RandomVec3 lightDirection = generateLight" << objectIndex << "Sample(surfacePoint.position);\n"
+             "        if (lightDirection.probability > 0.0) {\n"
+             "            vec3 origin = surfacePoint.position + lightDirection.value * 0.001;\n"
+             "            if (rayCanReach(origin, lightDirection.value, " << objectIndex << ")) {\n"
+             "                float bsdfProbability = BSDFSampleProbability(surfacePoint, material, lightDirection.value);\n"
              "                radiance += \n"
-             "                    1.0 / (bsdfProbability + lightProbability) *\n"
-             "                    /* bsdf todo */\n"
-             "                    max(0.0, dot(normal, direction)) *\n"
-             "                    evaluateLight" << objectIndex << "Sample(surfacePos, direction);\n"
+             "                    1.0 / (bsdfProbability + lightDirection.probability) *\n"
+             "                    evaluateBSDFSample(surfacePoint, material, lightDirection.value) *\n"
+             "                    max(0.0, dot(surfacePoint.normal, lightDirection.value)) *\n"
+             "                    evaluateLight" << objectIndex << "Sample(surfacePoint.position, lightDirection.value);\n"
              "            }\n"
              "        }\n"
              "    }\n";

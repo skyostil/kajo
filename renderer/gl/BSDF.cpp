@@ -28,4 +28,22 @@ void BSDF::writeBSDFFunctions(std::ostringstream& s)
          "    return M_1_PI * cos_theta;\n"
          "}\n"
          "\n";
+
+    s << "RandomVec3 generateBSDFSample(SurfacePoint surfacePoint, Material material)\n"
+         "{\n"
+         "    return generateLambertSample(surfacePoint);\n"
+         "}\n"
+         "\n";
+
+    s << "vec4 evaluateBSDFSample(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
+         "{\n"
+         "    return evaluateLambertSample(material);\n"
+         "}\n"
+         "\n";
+
+    s << "float BSDFSampleProbability(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
+         "{\n"
+         "    return lambertSampleProbability(surfacePoint, direction);\n"
+         "}\n"
+         "\n";
 }

@@ -135,27 +135,19 @@ glm::vec4 Shader::shade(const SurfacePoint& surfacePoint, Random& random, int de
 
     // Should this be a transparent sample?
     if (transparentSample.value) {
-        float cos_a = glm::dot(surfacePoint.view, surfacePoint.normal);
-        bool enteringMaterial = (cos_a < 0);
-        glm::vec3 normal = enteringMaterial ? surfacePoint.normal : -surfacePoint.normal;
-        float airRefractiveIndex = 1;
-        float eta = enteringMaterial ? airRefractiveIndex / material->refractiveIndex :
-                                       material->refractiveIndex / airRefractiveIndex;
-        cos_a = glm::dot(surfacePoint.view, normal);
+        IdealTransmissionBSDF bsdf(&surfacePoint, material->specular, material->refractiveIndex);
+        RandomValue<glm::vec3> bsdfDirection = bsdf.generateSample(random);
 
-        // Total internal reflection
         Ray transmittedRay;
-        if (1 - eta * eta * (1 - cos_a * cos_a) < 0) {
-            transmittedRay.direction = glm::reflect(surfacePoint.view, normal);
-        } else {
-            transmittedRay.direction = glm::refract(surfacePoint.view, normal, eta);
-        }
+        transmittedRay.direction = bsdfDirection.value;
         transmittedRay.origin = surfacePoint.position + transmittedRay.direction * g_surfaceEpsilon;
         SurfacePoint result = m_raytracer->trace(transmittedRay);
 
         return 1 / shouldContinue.probability *
                1 / transparentSample.probability *
-               (radiance + material->transparency * shade(result, random, depth + 1, lightSamplingScheme));
+               bsdf.evaluateSample(transmittedRay.direction) *
+               std::abs(glm::dot(surfacePoint.normal, transmittedRay.direction)) *
+               (radiance + shade(result, random, depth + 1, lightSamplingScheme));
     }
 
     float diffuseProbability = totalDiffuse / (totalDiffuse + totalSpecular);

@@ -62,6 +62,23 @@ private:
     glm::vec4 m_color;
 };
 
+class IdealTransmissionBSDF: public BSDF
+{
+public:
+    IdealTransmissionBSDF(const SurfacePoint*, const glm::vec4& color,
+                          float refractiveIndex);
+
+    RandomValue<glm::vec3> generateSample(Random& random) const override;
+    glm::vec4 evaluateSample(const glm::vec3& direction) const override;
+    float sampleProbability(const glm::vec3& direction) const override;
+
+    const glm::vec3& shadingNormal() const;
+private:
+    glm::vec4 m_color;
+    float m_refractiveIndex;
+};
+
+
 }
 
 #endif // BSDF_H

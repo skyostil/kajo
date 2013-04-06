@@ -94,3 +94,43 @@ float IdealReflectorBSDF::sampleProbability(const glm::vec3& direction) const
 {
     return 0.f;
 }
+
+IdealTransmissionBSDF::IdealTransmissionBSDF(const SurfacePoint* surfacePoint, const glm::vec4& color,
+                                             float refractiveIndex):
+    BSDF(surfacePoint),
+    m_color(color),
+    m_refractiveIndex(refractiveIndex)
+{
+}
+
+RandomValue<glm::vec3> IdealTransmissionBSDF::generateSample(Random& random) const
+{
+    float cos_a = glm::dot(m_surfacePoint->view, m_surfacePoint->normal);
+    bool enteringMaterial = (cos_a < 0);
+    glm::vec3 normal = enteringMaterial ? m_surfacePoint->normal : -m_surfacePoint->normal;
+    float airRefractiveIndex = 1;
+    float eta = enteringMaterial ? airRefractiveIndex / m_refractiveIndex :
+                                   m_refractiveIndex / airRefractiveIndex;
+    cos_a = glm::dot(m_surfacePoint->view, normal);
+
+    // Total internal reflection
+    RandomValue<glm::vec3> result;
+    if (1 - eta * eta * (1 - cos_a * cos_a) < 0) {
+        result.value = glm::reflect(m_surfacePoint->view, normal);
+    } else {
+        result.value = glm::refract(m_surfacePoint->view, normal, eta);
+    }
+    result.probability = 1.f;
+    return result;
+}
+
+glm::vec4 IdealTransmissionBSDF::evaluateSample(const glm::vec3& direction) const
+{
+    float cos_a = std::abs(glm::dot(direction, m_surfacePoint->normal));
+    return m_color / cos_a;
+}
+
+float IdealTransmissionBSDF::sampleProbability(const glm::vec3& direction) const
+{
+    return 0.f;
+}

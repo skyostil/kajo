@@ -9,7 +9,9 @@
 #include <memory>
 #include <sstream>
 
-static int hexToInt(wchar_t digit)
+namespace {
+
+int hexToInt(wchar_t digit)
 {
     if (digit >= L'0' && digit <= L'9')
         return (digit - L'0');
@@ -20,7 +22,7 @@ static int hexToInt(wchar_t digit)
     return 0;
 }
 
-static glm::vec4 parseVec4(std::wistream& ss)
+glm::vec4 parseVec4(std::wistream& ss)
 {
     glm::vec4 result;
     ss >> result.x;
@@ -38,13 +40,13 @@ static glm::vec4 parseVec4(std::wistream& ss)
     return result;
 }
 
-static glm::vec4 parseVec4(const std::wstring& s)
+glm::vec4 parseVec4(const std::wstring& s)
 {
     std::wstringstream ss(s);
     return parseVec4(ss);
 }
 
-static glm::vec3 parseVec3(std::wistream& ss)
+glm::vec3 parseVec3(std::wistream& ss)
 {
     glm::vec3 result;
     ss >> result.x;
@@ -59,38 +61,44 @@ static glm::vec3 parseVec3(std::wistream& ss)
     return result;
 }
 
-static glm::vec3 parseVec3(const std::wstring& s)
+glm::vec3 parseVec3(const std::wstring& s)
 {
     std::wstringstream ss(s);
     return parseVec3(ss);
 }
 
-static glm::vec4 parseColor(const std::wstring& value)
+glm::vec4 srgbToLinear(const glm::vec4& color)
 {
-    if (value.size() == 4 && value[0] == L'#')
-        return glm::vec4(hexToInt(value[1]) / 15.f, hexToInt(value[2]) / 15.f, hexToInt(value[3]) / 15.f, 1);
-    else if (value.size() == 7 && value[0] == L'#')
-    {
-        return glm::vec4(
+    return glm::pow(color, glm::vec4(2.2f));
+}
+
+glm::vec4 parseColor(const std::wstring& value)
+{
+    glm::vec4 result;
+    if (value.size() == 4 && value[0] == L'#') {
+        result = glm::vec4(hexToInt(value[1]) / 15.f, hexToInt(value[2]) / 15.f, hexToInt(value[3]) / 15.f, 1);
+    } else if (value.size() == 7 && value[0] == L'#') {
+        result = glm::vec4(
                 (hexToInt(value[1]) * 16 + hexToInt(value[2])) / 255.f,
                 (hexToInt(value[3]) * 16 + hexToInt(value[4])) / 255.f,
                 (hexToInt(value[5]) * 16 + hexToInt(value[6])) / 255.f, 1);
+    } else if (value.size() >= 6 && value.find(L"rgba(") == 0) {
+        result = parseVec4(value.substr(5));
+    } else if (value.size() >= 5 && value.find(L"rgb(") == 0) {
+        result = glm::vec4(parseVec3(value.substr(4)), 1);
     }
-    else if (value.size() >= 6 && value.find(L"rgba(") == 0)
-        return parseVec4(value.substr(5));
-    else if (value.size() >= 5 && value.find(L"rgb(") == 0)
-        return glm::vec4(parseVec3(value.substr(4)), 1);
-    return glm::vec4();
+    result = srgbToLinear(result);
+    return result;
 }
 
-static bool expect(std::wistream& s, const std::wstring& expected)
+bool expect(std::wistream& s, const std::wstring& expected)
 {
     std::wstring word;
     s >> word;
     return word == expected;
 }
 
-static glm::mat4 parseTransform(const std::wstring& value)
+glm::mat4 parseTransform(const std::wstring& value)
 {
     std::wstringstream ss(value);
     std::wstring command;
@@ -139,7 +147,7 @@ static glm::mat4 parseTransform(const std::wstring& value)
     return result;
 }
 
-static scene::Camera parseCamera(JSONObject data, float aspectRatio)
+scene::Camera parseCamera(JSONObject data, float aspectRatio)
 {
     scene::Camera camera;
     if (data.find(L"projection") != data.end())
@@ -157,7 +165,7 @@ static scene::Camera parseCamera(JSONObject data, float aspectRatio)
     return camera;
 }
 
-static void parseObjects(scene::Scene& scene, JSONArray data)
+void parseObjects(scene::Scene& scene, JSONArray data)
 {
     for (size_t i = 0; i < data.size(); i++)
     {
@@ -165,7 +173,7 @@ static void parseObjects(scene::Scene& scene, JSONArray data)
         if (objectData.find(L"type") == objectData.end())
             continue;
 
-	scene::Material material;
+        scene::Material material;
         if (objectData.find(L"diffuse") != objectData.end())
             material.diffuse = parseColor(objectData[L"diffuse"]->AsString());
         if (objectData.find(L"specular") != objectData.end())
@@ -185,7 +193,7 @@ static void parseObjects(scene::Scene& scene, JSONArray data)
 
         if (objectData[L"type"]->AsString() == L"sphere")
         {
-	    scene::Sphere sphere;
+            scene::Sphere sphere;
             sphere.radius = objectData[L"radius"]->AsNumber();
             sphere.material = material;
             sphere.transform = transform;
@@ -193,13 +201,15 @@ static void parseObjects(scene::Scene& scene, JSONArray data)
         }
         else if (objectData[L"type"]->AsString() == L"plane")
         {
-	    scene::Plane plane;
+            scene::Plane plane;
             plane.material = material;
             plane.transform = transform;
             scene.planes.push_back(plane);
         }
     }
 }
+
+} // namespace
 
 bool scene::Parser::load(Scene& scene, const std::string& fileName, float aspectRatio)
 {

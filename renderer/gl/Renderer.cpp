@@ -365,6 +365,7 @@ int Renderer::render()
             radiance.b /= radiance.w;
             radiance = glm::clamp(radiance, glm::vec4(0), glm::vec4(1));
             radiance.a = 1;
+            radiance = Image::linearToSRGB(glm::clamp(radiance, glm::vec4(0), glm::vec4(1)));
             uint32_t pixel = Image::colorToRGBA8(radiance);
             m_image->pixels[(m_image->height - 1 - y) * m_image->width + x] = pixel;
         }

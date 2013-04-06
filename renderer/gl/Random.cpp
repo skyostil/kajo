@@ -24,6 +24,31 @@ void Random::writeRandomNumberGenerator(std::ostringstream& s) const
          "};\n"
          "\n";
 
+    s << "RandomVec3 generateSpherical(vec3 seed)\n"
+         "{\n"
+         "    float u = random(seed.xy);\n"
+         "    float v = random(seed.yz) * 2.0 * M_PI;\n"
+         "    float r = sqrt(1.0 - u * u);\n"
+         "\n"
+         "    RandomVec3 result;\n"
+         "    result.value.x = r * cos(v);\n"
+         "    result.value.y = r * sin(v);\n"
+         "    result.value.z = u;\n"
+         "    result.probability = 1.0 / (4.0 * M_PI);\n"
+         "    return result;\n"
+         "}\n"
+         "\n";
+
+    s << "RandomVec3 generateHemispherical(vec3 seed, vec3 normal)\n"
+         "{\n"
+         "    RandomVec3 result = generateSpherical(seed);\n"
+         "    if (dot(result.value, normal) < 0.0)\n"
+         "        result.value = -result.value;\n"
+         "    result.probability = 1.0 / (2.0 * M_PI);\n"
+         "    return result;\n"
+         "}\n"
+         "\n";
+
     s << "RandomVec3 generateCosineHemispherical(vec3 seed)\n"
          "{\n"
          "    float u = random(seed.xy);\n"
@@ -37,7 +62,7 @@ void Random::writeRandomNumberGenerator(std::ostringstream& s) const
          "    result.value = vec3(x, y, z);\n"
          "    result.probability = z * M_1_PI;\n"
          "    return result;\n"
-         "};\n"
+         "}\n"
          "\n";
 
     s << "RandomVec3 generatePhong(vec3 seed, float exponent)\n"
@@ -53,7 +78,7 @@ void Random::writeRandomNumberGenerator(std::ostringstream& s) const
          "                        cos(a));\n"
          "    result.probability = (exponent + 1.0) / (2.0 * M_PI) * pow(cos(a), exponent);\n"
          "    return result;\n"
-         "};\n"
+         "}\n"
          "\n";
 
     s << "struct RandomBool {\n"
@@ -69,7 +94,7 @@ void Random::writeRandomNumberGenerator(std::ostringstream& s) const
          "    result.value = probability > 0.0 && r <= probability;\n"
          "    result.probability = result.value ? probability : (1.0 - probability);\n"
          "    return result;\n"
-         "};\n"
+         "}\n"
          "\n";
 }
 

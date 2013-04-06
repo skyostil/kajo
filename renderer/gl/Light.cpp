@@ -16,7 +16,7 @@ void SphericalLight::writeCommon(std::ostringstream& s)
          "    float dist = length(lightPos - surfacePos);\n"
          "    if (dist < radius)\n"
          "        return 4.0 * M_PI;\n"
-         "    return 2.0 * M_PI * (1.0 / cos(asin(radius / dist)));\n"
+         "    return 2.0 * M_PI * (1.0 - cos(asin(radius / dist)));\n"
          "}\n";
 }
 
@@ -77,6 +77,6 @@ void SphericalLight::writeSampleProbability(std::ostringstream& s, const std::st
     writeFloat(s, m_sphere->radius);
     s << ";\n";
 
-    s << "    return solidAngle(radius, lightPos, surfacePos);\n";
+    s << "    return 1.0 / solidAngle(radius, lightPos, surfacePos);\n";
     s << "}\n";
 }

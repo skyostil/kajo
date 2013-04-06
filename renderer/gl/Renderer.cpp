@@ -20,6 +20,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     m_originTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
     m_directionTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
     m_distanceNormalTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image->width, image->height)),
+    m_tangentTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
     m_radianceTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image->width, image->height)),
     m_weightTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGBA32F, image->width, image->height)),
     m_newOriginTexture(createTexture(GL_TEXTURE_2D, 1, GL_RGB32F, image->width, image->height)),
@@ -31,9 +32,11 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     m_originSampler(createSampler()),
     m_directionSampler(createSampler()),
     m_distanceNormalSampler(createSampler()),
+    m_tangentSampler(createSampler()),
     m_radianceSampler(createSampler()),
     m_weightSampler(createSampler()),
     m_distanceNormalFramebuffer(createFramebuffer()),
+    m_tangentFramebuffer(createFramebuffer()),
     m_nextIterationFramebuffer(createFramebuffer()),
     m_radianceFramebuffer(createFramebuffer()),
     m_radianceMap(new glm::vec4[image->width * image->height])
@@ -122,6 +125,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "    SurfacePoint result = traceRay(origin, direction);\n"
          "\n"
          "    gl_FragData[0] = vec4(result.normal * (result.objectIndex + 1.0), result.maxDistance);\n"
+         "    gl_FragData[1] = vec4(result.tangent, 0.0);\n"
          "}\n";
 
     //std::cout << s.str() << '\n';
@@ -138,6 +142,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "uniform sampler2D rayOriginSampler;\n"
          "uniform sampler2D rayDirectionSampler;\n"
          "uniform sampler2D distanceNormalSampler;\n"
+         "uniform sampler2D tangentSampler;\n"
          "uniform sampler2D radianceSampler;\n"
          "uniform sampler2D weightSampler;\n"
          "\n"
@@ -146,6 +151,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "    vec3 origin = texture2D(rayOriginSampler, imagePosition).xyz;\n"
          "    vec3 direction = texture2D(rayDirectionSampler, imagePosition).xyz;\n"
          "    vec4 distanceNormal = texture2D(distanceNormalSampler, imagePosition);\n"
+         "    vec3 tangent = texture2D(tangentSampler, imagePosition).xyz;\n"
          "    vec4 radiance = texture2D(radianceSampler, imagePosition);\n"
          "    vec4 weight = texture2D(weightSampler, imagePosition);\n"
          "\n"
@@ -157,6 +163,8 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "    surfacePoint.objectIndex = length(surfacePoint.normal);\n"
          "    surfacePoint.normal /= surfacePoint.objectIndex;\n"
          "    surfacePoint.objectIndex = surfacePoint.objectIndex - 1.0 + 0.5;\n"
+         "    surfacePoint.tangent = tangent;\n"
+         "    surfacePoint.binormal = cross(surfacePoint.normal, tangent);\n"
          "\n"
          "    shadeSurfacePoint(surfacePoint, imagePosition, radiance, weight);\n"
          "\n"
@@ -183,6 +191,8 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
     glSamplerParameteri(m_directionSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glSamplerParameteri(m_distanceNormalSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glSamplerParameteri(m_distanceNormalSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glSamplerParameteri(m_tangentSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(m_tangentSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glSamplerParameteri(m_radianceSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glSamplerParameteri(m_radianceSampler.get(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glSamplerParameteri(m_weightSampler.get(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -221,7 +231,14 @@ void Renderer::render()
         glUseProgram(m_tracerProgram.get());
         glBindFramebuffer(GL_FRAMEBUFFER, m_distanceNormalFramebuffer.get());
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_distanceNormalTexture.get(), 0);
-        glViewport(0, 0, m_image->width, m_image->height);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_tangentTexture.get(), 0);
+
+        const GLenum intersectShaderAttachments[] = {
+            GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1
+        };
+        glDrawBuffers(2, intersectShaderAttachments);
+        ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
+        ASSERT_GL();
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, m_directionTexture.get());
@@ -234,6 +251,7 @@ void Renderer::render()
         glBindSampler(0, m_originSampler.get());
         ASSERT_GL();
 
+        glViewport(0, 0, m_image->width, m_image->height);
         drawQuad();
 
         glUseProgram(0);
@@ -262,6 +280,11 @@ void Renderer::render()
         glDrawBuffers(4, shaderAttachments);
         ASSERT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
         ASSERT_GL();
+
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, m_tangentTexture.get());
+        glUniform1i(uniform(m_shaderProgram.get(), "tangentSampler"), 5);
+        glBindSampler(5, m_tangentSampler.get());
 
         glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_2D, m_weightTexture.get());
@@ -297,7 +320,10 @@ void Renderer::render()
         glBindSampler(2, 0);
         glBindSampler(3, 0);
         glBindSampler(4, 0);
+        glBindSampler(5, 0);
 
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE3);

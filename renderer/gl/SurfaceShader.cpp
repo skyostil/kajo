@@ -34,28 +34,35 @@ void SurfaceShader::writeSurfaceShader(std::ostringstream& s) const
          "{\n"
          "    Material material = materials[int(surfacePoint.objectIndex)];\n"
          "\n"
-         "    float u = 2.0 * random(imagePosition + surfacePoint.position.zy) - 1.0;\n"
-         "    float v = random(imagePosition + surfacePoint.position.yx);\n"
-         "    float r = sqrt(1.0 - u * u);\n"
-         "    float theta = v * 2.0 * M_PI;\n"
-         "    vec3 newDirection = vec3(r * cos(theta), r * sin(theta), u);\n"
-         "    if (dot(newDirection, surfacePoint.normal) < 0.0)\n"
-         "        newDirection = -newDirection;\n"
+         "    vec4 newRadiance = radiance + weight * sampleLights(surfacePoint, material);\n"
+         "    if (weight == vec4(1.0))\n" // Only apply emission for the first hit.
+         "        newRadiance += weight * material.emission;\n"
+         "    newRadiance.w = radiance.w;\n" // fixme
          "\n"
+         "    RandomVec3 bsdfDirection = generateBSDFSample(surfacePoint, material);\n"
+         "    float lightProbability = calculateLightProbabilities(surfacePoint, bsdfDirection.value);\n"
+         "\n"
+         "    vec4 newWeight = weight *\n"
+         "        1.0 / (lightProbability + bsdfDirection.probability) *\n"
+         "        evaluateBSDFSample(surfacePoint, material, bsdfDirection.value) *\n"
+         "        max(0.0, dot(bsdfDirection.value, surfacePoint.normal));\n"
+         "\n"
+         /*
          "    vec4 newRadiance = radiance + weight * material.emission;\n"
          "    newRadiance += weight * (material.specular + material.diffuse) * sampleLights(surfacePoint, material) * 0.01;\n"
          "    newRadiance.w = radiance.w;\n"
+         */
          "\n"
-         "    vec4 newWeight = weight * (material.specular + material.diffuse) * max(0.0, dot(newDirection, surfacePoint.normal));\n"
+         //"    vec4 newWeight = weight * (material.specular + material.diffuse) * max(0.0, dot(newDirection, surfacePoint.normal));\n"
          "    float maxWeight = max(newWeight.x, max(newWeight.y, newWeight.z));\n"
          "    if (maxWeight < 0.01) {\n"
-         "        generateRay(imagePosition, surfacePoint.position, newDirection);\n"
+         "        generateRay(imagePosition, surfacePoint.position, bsdfDirection.value);\n"
          "        newWeight = vec4(1.0);\n"
-         "        newRadiance.w = newRadiance.w + 1.0;\n"
+         "        newRadiance.w += 1.0;\n"
          "    }\n"
          "\n"
-         "    surfacePoint.position += newDirection * 0.001;\n"
-         "    surfacePoint.view = newDirection;\n"
+         "    surfacePoint.position += bsdfDirection.value * 0.001;\n"
+         "    surfacePoint.view = bsdfDirection.value;\n"
          "    radiance = newRadiance;\n"
          "    weight = newWeight;\n"
          "}\n"
@@ -147,6 +154,25 @@ void SurfaceShader::writeLights(std::ostringstream& s) const
              "    }\n";
     }
     s << "    return radiance;\n"
+         "}\n"
+         "\n";
+
+    s << "float calculateLightProbabilities(SurfacePoint surfacePoint, vec3 direction)\n"
+         "{\n"
+         "    float totalPdf = 0.0;\n";
+
+    for (size_t i = 0; i < m_scene->spheres.size(); i++) {
+        if (m_scene->spheres[i].material.material.emission == glm::vec4())
+            continue;
+
+        size_t objectIndex = m_scene->objectIndex(m_scene->spheres[i]);
+        s << "    {\n"
+             "        vec3 origin = surfacePoint.position + direction * 0.001;\n"
+             "        if (rayCanReach(origin, direction, " << objectIndex << "))\n"
+             "            totalPdf += light" << objectIndex << "SampleProbability(surfacePoint.position, direction);\n"
+             "    }\n";
+    }
+    s << "    return totalPdf;\n"
          "}\n"
          "\n";
 }

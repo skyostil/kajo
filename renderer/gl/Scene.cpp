@@ -62,7 +62,8 @@ Sphere::Sphere(const scene::Sphere& sphere):
 void Sphere::writeIntersector(std::ostringstream& s, const std::string& name, size_t objectIndex) const
 {
     s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance,\n"
-         "        inout float maxDistance, inout vec3 normal, inout float objectIndex)\n";
+         "        inout float maxDistance, inout vec3 normal, inout vec3 tangent,\n"
+         "        inout float objectIndex)\n";
     s << "{\n";
     s << "    mat4 transform = ";
     transform.writeMatrixInitializer(s);
@@ -115,9 +116,11 @@ void Sphere::writeIntersector(std::ostringstream& s, const std::string& name, si
          "\n"
          "        t0 = determinant * t0;\n"
          "        if (t0 > minDistance && t0 < maxDistance) {\n"
+         "            mat3 rotation = mat3(transform);\n"
          "            maxDistance = t0;\n"
          "            normal = localOrigin + localDir * t0;\n"
-         "            normal = normalize(mat3(transform) * normal);\n"
+         "            normal = normalize(rotation * normal);\n"
+         "            tangent = cross(normal, vec3(0.0, 1.0, 0.0));\n"
          "            objectIndex = localObjectIndex;\n"
          "        }\n"
          "    }\n"
@@ -133,7 +136,8 @@ Plane::Plane(const scene::Plane& plane):
 void Plane::writeIntersector(std::ostringstream& s, const std::string& name, size_t objectIndex) const
 {
     s << "void " << name << "(vec3 origin, vec3 direction, inout float minDistance,\n"
-         "        inout float maxDistance, inout vec3 normal, inout float objectIndex)\n";
+         "        inout float maxDistance, inout vec3 normal, inout vec3 tangent,\n"
+         "        inout float objectIndex)\n";
     s << "{\n";
     s << "    mat4 transform = ";
     transform.writeMatrixInitializer(s);
@@ -154,11 +158,14 @@ void Plane::writeIntersector(std::ostringstream& s, const std::string& name, siz
     s << "    vec3 localDir = mat3(invTransform) * direction;\n"
          "    vec3 localOrigin = (invTransform * vec4(origin, 1.0)).xyz;\n"
          "    vec3 localNormal = vec3(0.0, 1.0, 0.0);\n"
+         "    vec3 localTangent = vec3(1.0, 0.0, 0.0);\n"
+         "    mat3 rotation = mat3(transform);\n"
          "    float denom = dot(localDir, localNormal);\n"
          "    float t = -dot(localOrigin, localNormal) / denom;\n"
          "    if (t > minDistance && t < maxDistance) {\n"
          "        maxDistance = t;\n"
-         "        normal = mat3(transform) * -localNormal;\n"
+         "        normal = rotation * -localNormal;\n"
+         "        tangent = rotation * localTangent;\n"
          "        objectIndex = localObjectIndex;\n"
          "    }\n"
          "}\n";

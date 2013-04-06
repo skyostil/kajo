@@ -93,14 +93,14 @@ void Raytracer::writeRayIntersector(std::ostringstream& s) const
         std::string name = "intersectPlane" + std::to_string(i);
         s << "    " << name << "(origin, direction, result.minDistance, "
                                "result.maxDistance, result.normal, "
-                               "result.objectIndex);\n";
+                               "result.tangent, result.objectIndex);\n";
     }
 
     for (size_t i = 0; i < m_scene->spheres.size(); i++) {
         std::string name = "intersectSphere" + std::to_string(i);
         s << "    " << name << "(origin, direction, result.minDistance, "
                                "result.maxDistance, result.normal, "
-                               "result.objectIndex);\n";
+                               "result.tangent, result.objectIndex);\n";
     }
 
     s << "    result.view = direction;\n"

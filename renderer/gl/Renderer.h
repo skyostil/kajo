@@ -40,6 +40,7 @@ private:
     Texture m_originTexture;
     Texture m_directionTexture;
     Texture m_distanceNormalTexture;
+    Texture m_tangentTexture;
     Texture m_radianceTexture;
     Texture m_weightTexture;
 
@@ -56,10 +57,12 @@ private:
     Sampler m_originSampler;
     Sampler m_directionSampler;
     Sampler m_distanceNormalSampler;
+    Sampler m_tangentSampler;
     Sampler m_radianceSampler;
     Sampler m_weightSampler;
 
     Framebuffer m_distanceNormalFramebuffer;
+    Framebuffer m_tangentFramebuffer;
     Framebuffer m_nextIterationFramebuffer;
     Framebuffer m_radianceFramebuffer;
 

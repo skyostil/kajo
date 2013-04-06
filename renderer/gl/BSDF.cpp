@@ -5,7 +5,7 @@ using namespace gl;
 void BSDF::writeBSDFFunctions(std::ostringstream& s)
 {
     // Lambert
-    s << "RandomVec3 generateLambertSample(SurfacePoint surfacePoint)\n"
+    s << "RandomVec3 generateLambertSample(SurfacePoint surfacePoint, Material material)\n"
          "{\n"
          "    vec3 seed = surfacePoint.position + surfacePoint.view;\n"
          "    RandomVec3 result = generateCosineHemispherical(seed);\n"
@@ -17,13 +17,13 @@ void BSDF::writeBSDFFunctions(std::ostringstream& s)
          "}\n"
          "\n";
 
-    s << "vec4 evaluateLambertSample(Material material)\n"
+    s << "vec4 evaluateLambertSample(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
          "{\n"
          "    return material.diffuse * M_1_PI;\n"
          "}\n"
          "\n";
 
-    s << "float lambertSampleProbability(SurfacePoint surfacePoint, vec3 direction)\n"
+    s << "float lambertSampleProbability(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
          "{\n"
          "    float cos_theta = dot(direction, surfacePoint.normal);\n"
          "    return M_1_PI * cos_theta;\n"
@@ -83,21 +83,38 @@ void BSDF::writeBSDFFunctions(std::ostringstream& s)
          "}\n"
          "\n";
 
-    s << "RandomVec3 generateBSDFSample(SurfacePoint surfacePoint, Material material)\n"
+    // Ideal transmission
+    s << "RandomVec3 generateIdealTransmissionSample(SurfacePoint surfacePoint, Material material)\n"
          "{\n"
-         "    return generateLambertSample(surfacePoint);\n"
+         "    float cos_a = dot(surfacePoint.view, surfacePoint.normal);\n"
+         "    bool enteringMaterial = (cos_a < 0.0);\n"
+         "    vec3 normal = enteringMaterial ? surfacePoint.normal : -surfacePoint.normal;\n"
+         "    float airRefractiveIndex = 1.0;\n"
+         "    float eta = enteringMaterial ? airRefractiveIndex / material.refractiveIndex :\n"
+         "                                   material.refractiveIndex / airRefractiveIndex;\n"
+         "    cos_a = dot(surfacePoint.view, normal);\n"
+         "\n"
+              // Total internal reflection
+         "    RandomVec3 result;\n"
+         "    if (1.0 - eta * eta * (1.0 - cos_a * cos_a) < 0.0)\n"
+         "        result.value = reflect(surfacePoint.view, normal);\n"
+         "    else\n"
+         "        result.value = refract(surfacePoint.view, normal, eta);\n"
+         "    result.probability = 1.0;\n"
+         "    return result;\n"
+         "}\n"
+         "\n";
+    
+    s << "vec4 evaluateIdealTransmissionSample(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
+         "{\n"
+         "    float cos_a = abs(dot(direction, surfacePoint.normal));\n"
+         "    return material.transparency / cos_a;\n"
          "}\n"
          "\n";
 
-    s << "vec4 evaluateBSDFSample(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
+    s << "float idealTransmissionSampleProbability(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
          "{\n"
-         "    return evaluateLambertSample(material);\n"
-         "}\n"
-         "\n";
-
-    s << "float BSDFSampleProbability(SurfacePoint surfacePoint, Material material, vec3 direction)\n"
-         "{\n"
-         "    return lambertSampleProbability(surfacePoint, direction);\n"
+         "    return 0.0;\n"
          "}\n"
          "\n";
 }

@@ -44,7 +44,7 @@ void Random::writeRandomNumberGenerator(std::ostringstream& s) const
          "{\n"
          "    float u = random(seed.xy);\n"
          "    float v = random(seed.yz);\n"
-         "    float a = acos(pow(u, 1.0 / (exponent + 1.0)));\n"
+         "    float a = acos(pow(max(u, 0.000001), 1.0 / (exponent + 1.0)));\n"
          "    float phi = 2.0 * M_PI * v;\n"
          "\n"
          "    RandomVec3 result;\n"
@@ -52,6 +52,22 @@ void Random::writeRandomNumberGenerator(std::ostringstream& s) const
          "                        sin(a) * sin(phi),\n"
          "                        cos(a));\n"
          "    result.probability = (exponent + 1.0) / (2.0 * M_PI) * pow(cos(a), exponent);\n"
+         "    return result;\n"
+         "};\n"
+         "\n";
+
+    s << "struct RandomBool {\n"
+         "    bool value;\n"
+         "    float probability;\n"
+         "};\n"
+         "\n";
+
+    s << "RandomBool flipCoin(vec2 seed, float probability)\n"
+         "{\n"
+         "    float r = random(seed);\n"
+         "    RandomBool result;\n"
+         "    result.value = probability > 0.0 && r <= probability;\n"
+         "    result.probability = result.value ? probability : (1.0 - probability);\n"
          "    return result;\n"
          "};\n"
          "\n";

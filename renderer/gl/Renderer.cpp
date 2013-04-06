@@ -154,6 +154,7 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "    vec3 tangent = texture2D(tangentSampler, imagePosition).xyz;\n"
          "    vec4 radiance = texture2D(radianceSampler, imagePosition);\n"
          "    vec4 weight = texture2D(weightSampler, imagePosition);\n"
+         "    float samples = radiance.w;\n"
          "\n"
          "    SurfacePoint surfacePoint;\n"
          "    surfacePoint.view = direction;\n"
@@ -166,11 +167,11 @@ Renderer::Renderer(const scene::Scene& scene, Image* image):
          "    surfacePoint.tangent = tangent;\n"
          "    surfacePoint.binormal = cross(surfacePoint.normal, tangent);\n"
          "\n"
-         "    shadeSurfacePoint(surfacePoint, imagePosition, radiance, weight);\n"
+         "    shadeSurfacePoint(surfacePoint, imagePosition, radiance, weight, samples);\n"
          "\n"
          "    gl_FragData[0] = vec4(surfacePoint.position, 0.0);\n"
          "    gl_FragData[1] = vec4(surfacePoint.view, 0.0);\n"
-         "    gl_FragData[2] = radiance;\n"
+         "    gl_FragData[2] = vec4(radiance.xyz, samples);\n"
          "    gl_FragData[3] = weight;\n"
          "}\n";
 
@@ -209,7 +210,7 @@ void Renderer::drawQuad()
     ASSERT_GL();
 }
 
-void Renderer::render()
+int Renderer::render()
 {
     // Each ray has:
     // - origin
@@ -352,11 +353,13 @@ void Renderer::render()
     glPixelStorei(GL_PACK_ROW_LENGTH, 0);
     ASSERT_GL();
 
+    int samples = 0;
     for (int y = 0; y < m_image->height; y++) {
         for (int x = 0; x < m_image->width; x++) {
             glm::vec4 radiance = m_radianceMap[y * m_image->width + x];
             if (!radiance.w)
                 continue;
+            samples = std::max(static_cast<int>(radiance.w), samples);
             radiance.r /= radiance.w;
             radiance.g /= radiance.w;
             radiance.b /= radiance.w;
@@ -369,6 +372,7 @@ void Renderer::render()
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     ASSERT_GL();
+    return samples;
 }
 
 }

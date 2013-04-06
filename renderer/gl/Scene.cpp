@@ -17,9 +17,9 @@ void Material::writeInitializer(std::ostringstream& s) const
     s << "Material(vec4(";
     writeVec4(s, material.ambient);
     s << "), vec4(";
-    writeVec4(s, material.diffuse);
+    writeVec4(s, 1 * material.diffuse + 0 * material.specular);
     s << "), vec4(";
-    writeVec4(s, material.specular);
+    writeVec4(s, 1 * material.specular + 0 * material.diffuse);
     s << "), vec4(";
     writeVec4(s, material.emission);
     s << "), vec4(";
@@ -28,6 +28,26 @@ void Material::writeInitializer(std::ostringstream& s) const
     writeFloat(s, material.specularExponent);
     s << ", ";
     writeFloat(s, material.refractiveIndex);
+    s << ", ";
+
+    float totalDiffuse = material.diffuse.x + material.diffuse.y + material.diffuse.z;
+    float totalSpecular = material.specular.x + material.specular.y + material.specular.z;
+    float totalTransparency = material.transparency.x + material.transparency.y + material.transparency.z;
+
+    if (totalDiffuse + totalSpecular + totalTransparency > 0) {
+        float transparencyProbability = totalTransparency / (totalDiffuse + totalSpecular + totalTransparency);
+        writeFloat(s, transparencyProbability);
+    } else {
+        writeFloat(s, 0);
+    }
+    s << ", ";
+
+    if (totalDiffuse + totalSpecular > 0) {
+        float diffuseProbability = totalDiffuse / (totalDiffuse + totalSpecular);
+        writeFloat(s, diffuseProbability);
+    } else {
+        writeFloat(s, 0);
+    }
     s << ")";
 }
 

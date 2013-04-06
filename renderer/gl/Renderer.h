@@ -25,7 +25,7 @@ class Renderer
 public:
     Renderer(const scene::Scene& scene, Image* image);
 
-    void render();
+    int render();
 
 private:
     void drawQuad();

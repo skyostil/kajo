@@ -17,12 +17,11 @@ Scheduler::Scheduler(const scene::Scene& scene, Image* image, Preview* preview):
 
 void Scheduler::run()
 {
-    int pass = 1;
     while (m_preview->processEvents())
     {
-        m_renderer->render();
+        int samples = m_renderer->render();
         std::thread::id threadId = std::this_thread::get_id();
-        m_preview->update(threadId, pass++, 16, 0, 0, m_image->width, m_image->height);
+        m_preview->update(threadId, samples, 16, 0, 0, m_image->width, m_image->height);
     }
 }
 

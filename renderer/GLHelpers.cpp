@@ -46,7 +46,13 @@ Texture createTexture(GLenum target, int levels, GLenum internalFormat, int widt
     GLuint id;
     glGenTextures(1, &id);
     glBindTexture(target, id);
+#ifdef glTexStorage2D // from GLEW
     glTexStorage2D(target, levels, internalFormat, width, height);
+#else
+    glTexImage2D(target, levels, internalFormat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+#endif
     ASSERT_GL();
     return Texture(id);
 }

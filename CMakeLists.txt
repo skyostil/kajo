@@ -21,6 +21,13 @@ if(CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   endif()
   add_definitions(-Wall)
   add_definitions(-Wno-comment) # glm bug
+
+  execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+                  OUTPUT_VARIABLE GCC_VERSION)
+  if (GCC_VERSION VERSION_LESS 4.7)
+    add_definitions(-Doverride=)
+    add_definitions(-Dsteady_clock=monotonic_clock)
+  endif()
 endif()
 
 if(MSVC)

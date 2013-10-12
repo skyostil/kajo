@@ -31,7 +31,7 @@ std::unique_ptr<Preview> Preview::create(Image* image, bool useOpenGL)
                                          useOpenGL ? SDL_OPENGL : SDL_SWSURFACE);
     if (!preview->m_screen)
         return nullptr;
-    SDL_WM_SetCaption("Rayno", "Rayno");
+    SDL_WM_SetCaption("Kajo", "Kajo");
 
     if (useOpenGL) {
         if (glewInit() != GLEW_OK) {

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
-project(rayska)
+project(kajo)
 
 # -----------------------------------------------------------------------
 # Check whether we compile with CLANG.

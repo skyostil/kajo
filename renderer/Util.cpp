@@ -1,3 +1,4 @@
+// Copyright (C) 2012 Sami Kyöstilä
 #include "Util.h"
 
 void dump(const glm::vec3& v)

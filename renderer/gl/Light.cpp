@@ -1,3 +1,4 @@
+// Copyright (C) 2012 Sami Kyöstilä
 #include "Light.h"
 #include "Scene.h"
 #include "ShaderUtil.h"

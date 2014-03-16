@@ -28,7 +28,7 @@ Compiling
 
 1. Install dependencies, e.g., on Ubuntu/Debian:
 
-  `apt-get install cmake libsdl1.2-dev libsdl-ttf2.0-dev`
+  `apt-get install cmake libsdl1.2-dev libsdl-ttf2.0-dev libglew-dev`
 
 2. Check out a copy of the source code:
 

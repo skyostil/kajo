@@ -4,8 +4,8 @@ Kajo
 Kajo<sup>⌘</sup> is a small raytracer that renders images using [multiple importance
 sampling](http://graphics.stanford.edu/courses/cs348b-03/papers/veach-chapter9.pdf).
 It is a variant of the [Monte Carlo integration
-technique](http://en.wikipedia.org/wiki/Monte_Carlo_integration) where we
-compute samples from an integral using multiple techniques and combine them to
+technique](http://en.wikipedia.org/wiki/Monte_Carlo_integration) in which we
+compute samples from an integral using several techniques and combine them to
 get a better estimate of the actual value. In a raytracer this can help to
 reduce computation time and alleviate noise in the final image without
 introducing [bias](http://en.wikipedia.org/wiki/Unbiased_rendering).
@@ -75,11 +75,11 @@ Running
 
 In the build directory:
 
-    `renderer/renderer ../data/spheres.json`
+  `renderer/renderer ../data/spheres.json`
 
 Using the OpenGL renderer:
 
-    `renderer/renderer -r gl ../data/spheres.json`
+  `renderer/renderer -r gl ../data/spheres.json`
 
 References
 ----------

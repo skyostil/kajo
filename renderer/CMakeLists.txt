@@ -3,6 +3,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/renderer")
 find_package(Threads)
 find_package(SDL REQUIRED)
 find_package(SDL_ttf)
+find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
 add_executable(
@@ -67,6 +68,7 @@ target_link_libraries(
     scene
     lodepng
     ${SDL_LIBRARY}
+    ${OPENGL_LIBRARY}
     ${GLEW_LIBRARY}
     ${SDLTTF_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}

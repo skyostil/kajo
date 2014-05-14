@@ -4,16 +4,16 @@ Kajo
 Kajo is a small raytracer that renders images using [multiple importance
 sampling](http://graphics.stanford.edu/courses/cs348b-03/papers/veach-chapter9.pdf).
 It is a variant of the [Monte Carlo integration
-technique](http://en.wikipedia.org/wiki/Monte_Carlo_integration) that computes
-samples from an integral using multiple techniques and combines them get a
-better result. In a raytracer this can help to reduce computation time and
-alleviate noise in the final image without introducing
-[bias](http://en.wikipedia.org/wiki/Unbiased_rendering).
+technique](http://en.wikipedia.org/wiki/Monte_Carlo_integration) where we
+compute samples from an integral using multiple techniques and combine them to
+get a better estimate of the actual value. In a raytracer this can help to
+reduce computation time and alleviate noise in the final image without
+introducing [bias](http://en.wikipedia.org/wiki/Unbiased_rendering).
 
 Kajo currently only supports planes, spheres and spherical lights. There are
 two rendering backends:
 
-  - Multithreaded CPU renderer
+  - C++ multithreaded CPU renderer
   - OpenGL (GLSL version 1.20) renderer
 
 Kajo is licensed under the [MIT open source license](http://opensource.org/licenses/MIT).
@@ -32,7 +32,7 @@ Compiling
 
 2. Check out a copy of the source code:
 
-  `git clone ...`
+  `git clone https://github.com/skyostil/kajo.git`
 
 3. Prepare the build files with cmake:
 

@@ -21,12 +21,25 @@ Kajo is licensed under the [MIT open source license](http://opensource.org/licen
 Sample images
 -------------
 
+Traditional Monte Carlo
 ![Traditional Monte Carlo](images/kajo_monte_carlo.png)
+
+Multiple importance sampling #1
 ![Multiple importance sampling #1](images/kajo_multiple_importance_sampling.png)
+
+Multiple importance sampling #2
 ![Multiple importance sampling #2](images/kajo_multiple_importance_sampling2.png)
+
+Phong lighting
 ![Phong lighting](images/kajo_phong.png)
+
+Caustics
 ![Caustics](images/kajo_caustics.png)
+
+No explicit lighting
 ![No explicit lighting](images/kajo_no_explicit_lighting.png)
+
+Explicit lighting
 ![Explicit lighting](images/kajo_explicit_lighting.png)
 
 Compiling

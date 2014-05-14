@@ -1,7 +1,7 @@
 Kajo
 ====
 
-Kajo is a small raytracer that renders images using [multiple importance
+Kajo<sup>⌘</sup> is a small raytracer that renders images using [multiple importance
 sampling](http://graphics.stanford.edu/courses/cs348b-03/papers/veach-chapter9.pdf).
 It is a variant of the [Monte Carlo integration
 technique](http://en.wikipedia.org/wiki/Monte_Carlo_integration) where we
@@ -17,6 +17,8 @@ two rendering backends:
   - OpenGL (GLSL version 1.20) renderer
 
 Kajo is licensed under the [MIT open source license](http://opensource.org/licenses/MIT).
+
+<sub>⌘ "kajo" means a glimmer of light in Finnish.</sub>
 
 Sample images
 -------------

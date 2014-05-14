@@ -3,7 +3,7 @@ Kajo
 
 Kajo<sup>⌘</sup> is a small raytracer that renders images using [multiple importance
 sampling](http://graphics.stanford.edu/courses/cs348b-03/papers/veach-chapter9.pdf).
-It is a variant of the [Monte Carlo integration
+This is a variant of the [Monte Carlo integration
 technique](http://en.wikipedia.org/wiki/Monte_Carlo_integration) in which we
 compute samples from an integral using several techniques and combine them to
 get a better estimate of the actual value. In a raytracer this can help to

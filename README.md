@@ -1,6 +1,8 @@
 Kajo
 ====
 
+([Main site](http://www.unrealvoodoo.org/projects/kajo))
+
 Kajo<sup>⌘</sup> is a small raytracer that renders images using [multiple importance
 sampling](http://graphics.stanford.edu/courses/cs348b-03/papers/veach-chapter9.pdf).
 This is a variant of the [Monte Carlo integration
@@ -50,6 +52,8 @@ No explicit lighting
 Explicit lighting
 
 ![Explicit lighting](images/kajo_explicit_lighting.png)
+
+[More images](http://www.unrealvoodoo.org/projects/kajo)
 
 Compiling
 ---------

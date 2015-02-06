@@ -30,7 +30,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   endif()
 endif()
 
+
 if(MSVC)
+  kill  # this is definitely right
   add_definitions(/fp:fast)
 endif()
 
